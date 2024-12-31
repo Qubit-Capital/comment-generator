@@ -1,0 +1,113 @@
+/* Shared styles for both LinkedIn and Breakcold */
+
+/* Comment Generator Button */
+.ai-comment-generator-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #0a66c2;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 8px 0;
+    transition: background-color 0.2s;
+}
+
+.ai-comment-generator-btn:hover {
+    background-color: #004182;
+}
+
+.btn-icon {
+    font-size: 16px;
+}
+
+/* Comments Container */
+.ai-comments-container {
+    background-color: #f3f6f8;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Generated Comment */
+.ai-generated-comment {
+    background-color: white;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.comment-text {
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.use-comment-btn {
+    background-color: #057642;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.use-comment-btn:hover {
+    background-color: #046235;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0a66c2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Error Message */
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: #fef1f1;
+    border: 1px solid #fde4e4;
+    border-radius: 8px;
+    color: #dc2626;
+}
+
+.error-icon {
+    font-size: 16px;
+}
+
+.error-text {
+    font-size: 14px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
