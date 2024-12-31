@@ -4,19 +4,19 @@
 LinkedIn Comment Generator Chrome Extension that helps users generate contextually relevant comments on LinkedIn posts.
 
 ## Current State
-- Version: 1.0.1
+- Version: 1.0.2
 - Platform: Chrome Extension
-- Main Integration: LinkedIn
+- Main Integration: LinkedIn, Breakcold
 - API: Relevance API (https://api-bcbe5a.stack.tryrelevance.com/latest/studios)
 
 ## Key Components
 
 ### 1. Content Scripts
 - **linkedin-content.js**: Main content script for LinkedIn integration
-  - Handles post text extraction
-  - Manages comment generation UI
-  - Integrates with LinkedIn's Quill editor
-  - Implements modal display and interaction
+  - Enhanced post text extraction with multiple selectors
+  - Improved UI with loading states and animations
+  - Modal-based comment selection with regeneration
+  - Smooth transitions and error handling
 
 ### 2. API Integration
 - Direct API calls without shared library
@@ -33,7 +33,10 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - Handles markdown-wrapped JSON responses
 
 ### 3. UI Components
-- Modal-based comment selection
+- Enhanced modal-based comment selection
+- Loading spinners with platform-specific styling
+- Regenerate button with loading state
+- Close button for modal dismissal
 - Type badges for different comment styles:
   - Friendly
   - Encouraging
@@ -41,26 +44,29 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
   - Positive
   - Curious
 - LinkedIn-styled interface
-- Responsive design
+- Responsive design with smooth transitions
 
 ### 4. Text Extraction
-- Uses specific LinkedIn selectors:
+- Comprehensive LinkedIn selectors:
 ```javascript
-'.feed-shared-update-v2__description-wrapper',
-'.feed-shared-update-v2__commentary',
-'.feed-shared-text-view span[dir="ltr"]',
+'.feed-shared-update-v2__description',
+'.feed-shared-text-view',
+'.feed-shared-inline-show-more-text',
+'.feed-shared-update__description',
+'.update-components-text',
 '.feed-shared-text',
-'.update-components-text'
+'.feed-shared-article'
 ```
-- Filters unwanted elements
-- Handles different post types
+- Improved post container detection
+- Enhanced error handling
+- Support for various post types
 
 ## Recent Changes
-1. Fixed modal display issues
-2. Improved API integration
-3. Enhanced text extraction
-4. Added type badges
-5. Improved error handling
+1. Added aesthetic loading spinners
+2. Implemented comment selection UI
+3. Added regenerate functionality
+4. Enhanced text extraction reliability
+5. Improved error handling and user feedback
 
 ## Known Issues
 - Need to handle dynamic content loading better
@@ -68,38 +74,40 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - Mobile responsiveness needs testing
 
 ## Next Steps
-1. Improve Breakcold integration
+1. Further improve Breakcold integration
 2. Add more comment types
-3. Enhance error handling
-4. Improve mobile support
-5. Add analytics
+3. Enhance mobile support
+4. Add analytics
+5. Implement user preferences
 
 ## Technical Details
 
 ### DOM Structure
-The extension interacts with LinkedIn's DOM structure:
-- Post content is nested in feed-shared components
-- Comments use Quill editor
-- Dynamic content loading needs observation
+The extension interacts with both LinkedIn and Breakcold DOM structures:
+- LinkedIn: Uses feed-shared components and Quill editor
+- Breakcold: Custom comment field integration
+- Both: Dynamic content loading with mutation observers
 
 ### API Flow
-1. Extract post text
-2. Send to Relevance API
-3. Parse markdown-wrapped JSON response
-4. Display formatted comments in modal
-5. Handle selection and insertion
+1. Extract post text using platform-specific selectors
+2. Show loading state with platform-styled spinner
+3. Send to Relevance API
+4. Parse markdown-wrapped JSON response
+5. Display formatted comments in modal with selection options
+6. Handle regeneration and insertion
 
 ### Error Handling
-- Comprehensive error messages
+- Enhanced error messages with visual feedback
 - User-friendly notifications
+- Loading states for all async operations
 - Detailed logging
 - Retry mechanisms
 
 ## Development Guidelines
-1. Match LinkedIn's design language
+1. Match platform-specific design languages
 2. Maintain responsive design
-3. Handle errors gracefully
-4. Log important operations
+3. Handle errors gracefully with visual feedback
+4. Implement smooth transitions
 5. Clean up resources properly
 
 ## Testing Requirements

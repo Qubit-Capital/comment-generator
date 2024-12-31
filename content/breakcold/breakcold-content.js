@@ -1,222 +1,53 @@
-// Copy the entire content.js from breakcold-comment-generator
-const style = document.createElement('style');
-style.textContent = `
-    .comment-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
+// Debug configuration
+const DEBUG = true;
+const log = (...args) => DEBUG && console.log('[AI Comment Generator]', ...args);
 
-    .comment-modal.hidden {
-        display: none;
-    }
-
-    .modal-content {
-        background-color: white;
-        padding: 20px;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-        position: relative;
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .modal-header h2 {
-        margin: 0;
-        font-size: 18px;
-        color: #333;
-    }
-
-    .modal-close {
-        background: none;
+// Platform-specific styles
+const platformStyles = document.createElement('style');
+platformStyles.textContent = `
+    .comment-generator-button {
+        background: transparent;
         border: none;
-        font-size: 24px;
+        color: rgb(100 116 139);
         cursor: pointer;
-        color: #666;
-    }
-
-    .modal-close:hover {
-        color: #333;
-    }
-
-    .loading-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px;
-    }
-
-    .loading-container.hidden {
-        display: none;
-    }
-
-    .loading-spinner {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-    }
-
-    .spinner-dot {
-        width: 8px;
-        height: 8px;
-        background-color: #0a66c2;
+        padding: 8px;
         border-radius: 50%;
-        animation: bounce 0.5s infinite alternate;
-    }
-
-    .spinner-dot:nth-child(2) {
-        animation-delay: 0.1s;
-    }
-
-    .spinner-dot:nth-child(3) {
-        animation-delay: 0.2s;
-    }
-
-    .spinner-dot:nth-child(4) {
-        animation-delay: 0.3s;
-    }
-
-    @keyframes bounce {
-        to {
-            transform: translateY(-8px);
-        }
-    }
-
-    .loading-text {
-        color: #666;
-        font-size: 14px;
-    }
-
-    .error-message {
-        color: #d32f2f;
-        padding: 12px;
-        text-align: center;
-        margin: 12px 0;
-        background-color: #ffebee;
-        border-radius: 4px;
-    }
-
-    .error-message.hidden {
-        display: none;
-    }
-
-    .comments-container {
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        width: 32px;
+        height: 32px;
     }
 
-    .comment-option {
-        background-color: #f5f5f5;
-        padding: 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
+    .comment-generator-button:hover {
+        background-color: rgba(100, 116, 139, 0.1);
     }
 
-    .comment-option:hover {
-        background-color: #e0e0e0;
-    }
-
-    .comment-text {
-        margin: 0;
-        color: #333;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-
-    .action-buttons {
+    .comment-generator-container {
+        position: absolute;
+        right: 45px;
+        bottom: 8px;
         display: flex;
-        gap: 8px;
-        margin-top: 16px;
-        justify-content: flex-end;
-    }
-
-    .action-button {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 16px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.2s;
-    }
-
-    .regenerate-button {
-        background-color: #0a66c2;
-        color: white;
-    }
-
-    .regenerate-button:hover {
-        background-color: #004182;
-    }
-
-    .notification {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 4px;
-        color: white;
-        font-size: 14px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-    }
-
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    .notification.info {
-        background-color: #0a66c2;
-    }
-
-    .notification.error {
-        background-color: #d32f2f;
-    }
-
-    .notification.success {
-        background-color: #2e7d32;
+        align-items: center;
     }
 `;
 
-document.head.appendChild(style);
+document.head.appendChild(platformStyles);
 
 // Function to get post text
 function getPostText(button) {
     try {
-        // Find the comment field container (parent of the button)
-        const commentField = button.parentElement;
+        // Find the comment field container
+        const commentField = button.closest('.comment-generator-container')?.parentElement;
         if (!commentField) {
             throw new Error('Could not find comment field');
         }
 
-        // Find the post container (the main post content)
+        // Find the post container
         let currentElement = commentField;
         let postContainer = null;
 
-        // Keep traversing up until we find the main post container
         while (currentElement && !postContainer) {
             if (currentElement.matches('article') || 
                 currentElement.matches('.flex.flex-col')) {
@@ -241,9 +72,7 @@ function getPostText(button) {
         // Extract text content
         const textContent = Array.from(contentContainer.childNodes)
             .filter(node => {
-                // Keep text nodes
                 if (node.nodeType === Node.TEXT_NODE) return true;
-                // Skip buttons and interactive elements
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     return !node.matches('button, a, [class*="cursor-pointer"]');
                 }
@@ -253,94 +82,112 @@ function getPostText(button) {
             .filter(text => text)
             .join(' ');
 
-        return textContent;
-    } catch (error) {
-        console.error('Error getting post text:', error);
-        throw error;
-    }
-}
+        // Get image if present
+        const image = postContainer.querySelector('img:not([alt=""])');
+        const imageAlt = image ? image.alt : '';
 
-// Function to fetch comment suggestions
-async function fetchCommentSuggestions(postText) {
-    const API_CONFIG = {
-        studioId: 'e24e0d8f-55bc-42b3-b4c0-ef86b7f9746c',
-        projectId: '8cdcb88c-3a0b-44b1-915e-09454e18f5e5',
-        baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios'
-    };
-    
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const apiUrl = `${API_CONFIG.baseUrl}/${API_CONFIG.studioId}/trigger_limited`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    params: {
-                        linked_in_post: postText
-                    },
-                    project: API_CONFIG.projectId
-                })
-            });
+        // Combine text content and image description
+        const postText = [textContent, imageAlt].filter(Boolean).join(' ').trim();
 
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('API Response:', data);
-
-            if (!data.output || !data.output.answer) {
-                throw new Error('Invalid API response format');
-            }
-
-            let parsedAnswer = JSON.parse(data.output.answer.replace(/```json\n?|\n?```/g, '').trim());
-            console.log('Parsed Answer:', parsedAnswer);
-
-            if (!parsedAnswer || !Array.isArray(parsedAnswer.comments)) {
-                throw new Error('Invalid comments data format');
-            }
-
-            return parsedAnswer.comments;
-
-        } catch (error) {
-            console.error(`Error in attempt ${attempt}:`, error);
-            if (attempt === maxRetries) {
-                throw error;
-            }
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        if (!postText) {
+            throw new Error('Could not find post content');
         }
+
+        log('Successfully extracted post text:', postText);
+        return postText;
+    } catch (error) {
+        log('Error in getPostText:', error);
+        throw error;
     }
 }
 
 // Function to create comment button
 function createCommentButton() {
     const button = document.createElement('button');
-    button.className = 'comment-button';
-    button.innerHTML = '💡 Generate Comment';
-    button.style.cssText = `
-        background-color: #0a66c2;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 16px;
-        cursor: pointer;
-        font-size: 14px;
-        margin: 8px 0;
-        display: flex;
-        align-items: center;
-    `;
+    button.className = 'comment-generator-button';
+    button.innerHTML = '<span class="icon">✨</span>';
+    button.addEventListener('click', handleCommentGeneration);
     return button;
+}
+
+// Function to inject button for comment fields
+function injectButtonForCommentField(commentField) {
+    // Check if it's a Breakcold comment field
+    if (!commentField.matches('textarea[placeholder*="Add a comment"]')) return;
+    
+    // Get the parent container
+    const container = commentField.closest('.w-full.flex.relative');
+    if (!container) return;
+    
+    // Check if button already exists
+    const existingButton = container.querySelector('.comment-generator-button');
+    if (existingButton) return;
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'comment-generator-container';
+    
+    const button = createCommentButton();
+    buttonContainer.appendChild(button);
+    
+    // Find the emoji button container
+    const emojiButton = container.querySelector('button[aria-haspopup="dialog"]');
+    if (emojiButton) {
+        emojiButton.parentElement.insertBefore(buttonContainer, emojiButton);
+    } else {
+        container.appendChild(buttonContainer);
+    }
+}
+
+// Function to handle comment generation
+async function handleCommentGeneration(event) {
+    const button = event.target.closest('.comment-generator-button');
+    if (!button) return;
+
+    try {
+        const modal = createCommentModal();
+        document.body.appendChild(modal);
+        
+        // Force reflow to trigger animation
+        modal.offsetHeight;
+        modal.classList.remove('hidden');
+
+        const loadingContainer = modal.querySelector('.loading-container');
+        const errorMessage = modal.querySelector('.error-message');
+        
+        loadingContainer.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+
+        const postText = getPostText(button);
+        log('Successfully extracted post text:', postText);
+
+        const comments = await window.CommentAPI.generateComments(postText, 'breakcold');
+        
+        loadingContainer.classList.add('hidden');
+        displayCommentOptions(comments, modal);
+        
+    } catch (error) {
+        log('Error generating comments:', error);
+        const modal = document.querySelector('.comment-modal');
+        if (modal) {
+            const loadingContainer = modal.querySelector('.loading-container');
+            const errorMessage = modal.querySelector('.error-message');
+            
+            loadingContainer.classList.add('hidden');
+            errorMessage.classList.remove('hidden');
+            errorMessage.innerHTML = `
+                <svg class="error-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM11 15H9V13H11V15ZM11 11H9V5H11V11Z" fill="currentColor"/>
+                </svg>
+                <span>Failed to generate comments. Please try again.</span>
+            `;
+        }
+    }
 }
 
 // Function to create comment modal
 function createCommentModal() {
     const modal = document.createElement('div');
-    modal.className = 'comment-modal hidden';
+    modal.className = 'comment-modal breakcold hidden';
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -349,10 +196,7 @@ function createCommentModal() {
             </div>
             <div class="loading-container hidden">
                 <div class="loading-spinner">
-                    <div class="spinner-dot"></div>
-                    <div class="spinner-dot"></div>
-                    <div class="spinner-dot"></div>
-                    <div class="spinner-dot"></div>
+                    <div class="spinner"></div>
                 </div>
                 <div class="loading-text">Generating comments...</div>
             </div>
@@ -361,100 +205,131 @@ function createCommentModal() {
         </div>
     `;
 
+    // Close button handler
     modal.querySelector('.modal-close').addEventListener('click', () => {
         modal.classList.add('hidden');
+        setTimeout(() => {
+            modal.remove();
+        }, 300); // Match transition duration
+    });
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.querySelector('.modal-close').click();
+        }
     });
 
     document.body.appendChild(modal);
     return modal;
 }
 
-// Function to handle comment generation
-async function handleCommentGeneration(event) {
-    const button = event.target;
-    const modal = createOrGetModal();
+// Function to display comment options
+function displayCommentOptions(comments, modal) {
     const loadingContainer = modal.querySelector('.loading-container');
-    const errorMessage = modal.querySelector('.error-message');
     const commentsList = modal.querySelector('.comments-list');
+    const errorMessage = modal.querySelector('.error-message');
     
-    modal.classList.remove('hidden');
-    loadingContainer.classList.remove('hidden');
+    // Hide loading and error states
+    loadingContainer.classList.add('hidden');
     errorMessage.classList.add('hidden');
     commentsList.innerHTML = '';
     
-    try {
-        const postText = getPostText(button);
-        const comments = await fetchCommentSuggestions(postText);
-        
-        loadingContainer.classList.add('hidden');
-        displayCommentOptions(comments, modal, findCommentField(button), postText);
-        
-    } catch (error) {
-        console.error('Error generating comments:', error);
-        loadingContainer.classList.add('hidden');
-        errorMessage.textContent = error.message;
-        errorMessage.classList.remove('hidden');
-    }
-}
+    // Add regenerate button
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'action-buttons';
+    actionButtons.innerHTML = `
+        <button class="regenerate-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C9.29583 2 10.4957 2.40132 11.5 3.0863" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M14 3V8H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Regenerate Comments
+        </button>
+    `;
 
-// Function to display comment options
-function displayCommentOptions(comments, modal, commentField, postText) {
-    const commentsList = modal.querySelector('.comments-list');
-    commentsList.innerHTML = '';
-    
-    const commentsContainer = document.createElement('div');
-    commentsContainer.className = 'comments-container';
-    
-    comments.forEach((comment, index) => {
-        const commentOption = document.createElement('div');
-        commentOption.className = 'comment-option';
-        commentOption.innerHTML = `<p class="comment-text">${comment}</p>`;
-        
-        commentOption.addEventListener('click', () => {
-            if (commentField) {
-                commentField.value = comment;
-                commentField.dispatchEvent(new Event('input', { bubbles: true }));
-                modal.classList.add('hidden');
-                showNotification('Comment inserted successfully!', 'success');
-            }
-        });
-        
-        commentsContainer.appendChild(commentOption);
-    });
-    
-    const actionButtonsContainer = document.createElement('div');
-    actionButtonsContainer.className = 'action-buttons';
-    
-    const regenerateButton = document.createElement('button');
-    regenerateButton.className = 'action-button regenerate-button';
-    regenerateButton.textContent = 'Regenerate Comments';
-    regenerateButton.addEventListener('click', async () => {
+    // Add regenerate functionality
+    const regenerateBtn = actionButtons.querySelector('.regenerate-btn');
+    regenerateBtn.addEventListener('click', async () => {
         try {
-            const comments = await fetchCommentSuggestions(postText);
-            displayCommentOptions(comments, modal, commentField, postText);
+            // Get post text again
+            const button = document.querySelector('.comment-generator-button');
+            const postText = getPostText(button);
+            
+            // Update loading text
+            const loadingText = loadingContainer.querySelector('.loading-text');
+            loadingText.textContent = 'Regenerating comments...';
+            
+            // Show loading state
+            loadingContainer.classList.remove('hidden');
+            commentsList.innerHTML = '';
+            
+            // Generate new comments
+            const newComments = await window.CommentAPI.generateComments(postText, 'breakcold');
+            displayCommentOptions(newComments, modal);
+            
         } catch (error) {
             console.error('Error regenerating comments:', error);
             showNotification('Failed to regenerate comments', 'error');
         }
     });
+
+    commentsList.appendChild(actionButtons);
     
-    actionButtonsContainer.appendChild(regenerateButton);
-    commentsContainer.appendChild(actionButtonsContainer);
-    commentsList.appendChild(commentsContainer);
+    // Display comments
+    comments.forEach((comment, index) => {
+        const option = document.createElement('div');
+        option.className = 'comment-option';
+        
+        option.innerHTML = `
+            <div class="comment-text">${comment.text || comment}</div>
+            <button class="use-comment-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13.3332 4L5.99984 11.3333L2.6665 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Use this comment
+            </button>
+        `;
+        
+        const useButton = option.querySelector('.use-comment-btn');
+        useButton.addEventListener('click', () => {
+            const commentField = findCommentField(modal);
+            if (commentField) {
+                insertComment(commentField, comment.text || comment);
+                // Add hidden class to trigger transition
+                modal.classList.add('hidden');
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
+                showNotification('Comment added successfully!', 'success');
+            } else {
+                showNotification('Could not find comment field', 'error');
+            }
+        });
+        
+        commentsList.appendChild(option);
+    });
+}
+
+// Function to insert comment
+function insertComment(field, text) {
+    if (!field || !text) return;
+    
+    // Set the value and dispatch input event
+    field.value = text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Focus the field
+    field.focus();
 }
 
 // Function to find comment field
-function findCommentField(button) {
-    return button.parentElement.querySelector('.comment-input');
-}
-
-// Function to create or get modal
-function createOrGetModal() {
-    let modal = document.querySelector('.comment-modal');
-    if (!modal) {
-        modal = createCommentModal();
-    }
-    return modal;
+function findCommentField(modal) {
+    const button = document.querySelector('.comment-generator-button');
+    if (!button) return null;
+    
+    // Find the closest input or textarea
+    return button.closest('.relative')?.querySelector('textarea') || null;
 }
 
 // Function to show notification
@@ -465,48 +340,37 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
+    // Remove after 3 seconds
     setTimeout(() => {
-        notification.remove();
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
     }, 3000);
-}
-
-// Function to inject button for comment field
-function injectButtonForCommentField(commentField) {
-    if (!shouldInjectButton(commentField)) return;
-    
-    const button = createCommentButton();
-    commentField.parentElement.insertBefore(button, commentField);
-    
-    button.addEventListener('click', handleCommentGeneration);
-}
-
-// Function to check if we should inject button
-function shouldInjectButton(field) {
-    if (!field || !field.parentElement) return false;
-    if (field.parentElement.querySelector('.comment-button')) return false;
-    return true;
 }
 
 // Initialize button injection
 function initializeButtonInjection() {
-    // Initial injection for existing comment fields
-    document.querySelectorAll('.comment-input').forEach(injectButtonForCommentField);
-    
+    // Initial injection
+    document.querySelectorAll('textarea[placeholder*="Add a comment"]').forEach(injectButtonForCommentField);
+
     // Watch for new comment fields
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    if (node.matches('.comment-input')) {
-                        injectButtonForCommentField(node);
-                    } else {
-                        node.querySelectorAll('.comment-input').forEach(injectButtonForCommentField);
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.matches('textarea[placeholder*="Add a comment"]')) {
+                            injectButtonForCommentField(node);
+                        } else {
+                            node.querySelectorAll('textarea[placeholder*="Add a comment"]').forEach(injectButtonForCommentField);
+                        }
                     }
-                }
-            });
-        });
+                });
+            }
+        }
     });
-    
+
     observer.observe(document.body, {
         childList: true,
         subtree: true

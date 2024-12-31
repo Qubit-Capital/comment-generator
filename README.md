@@ -1,14 +1,17 @@
 # LinkedIn Comment Generator
 
-A Chrome extension that helps users generate contextually relevant comments on LinkedIn posts using AI.
+A Chrome extension that helps users generate contextually relevant comments on LinkedIn and Breakcold posts using AI.
 
 ## Features
 
 - Generates relevant comments based on post content
 - Multiple comment styles (Friendly, Encouraging, Neutral, Positive, Curious)
-- LinkedIn-styled interface
-- Easy one-click comment generation
-- Smart post content extraction
+- Enhanced UI with loading animations and smooth transitions
+- Platform-specific styling (LinkedIn and Breakcold)
+- Easy comment selection with "Use this Comment" buttons
+- Comment regeneration capability
+- Smart post content extraction with comprehensive selectors
+- Elegant error handling with visual feedback
 
 ## Installation
 
@@ -19,11 +22,13 @@ A Chrome extension that helps users generate contextually relevant comments on L
 
 ## Usage
 
-1. Navigate to LinkedIn
+1. Navigate to LinkedIn or Breakcold
 2. Find a post you want to comment on
 3. Click the "Generate Comment" button
-4. Select from the AI-generated comment suggestions
-5. The selected comment will be automatically inserted into the comment field
+4. Wait for the AI to generate comments (indicated by a loading spinner)
+5. Choose from multiple AI-generated suggestions by clicking "Use this Comment"
+6. Not satisfied? Click "Regenerate Comments" for new suggestions
+7. The selected comment will be automatically inserted into the comment field
 
 ## Development
 
@@ -42,7 +47,15 @@ cd comment-generator
 - `manifest.json`: Extension configuration
 - `content/`: Content scripts
   - `linkedin/`: LinkedIn-specific integration
+  - `breakcold/`: Breakcold-specific integration
 - `shared/`: Shared utilities and API integration
+- `styles/`: CSS files for UI components
+
+### Key Components
+1. **Content Scripts**: Handle platform-specific integrations
+2. **UI Components**: Loading spinners, modals, and buttons
+3. **API Integration**: Communicates with Relevance API
+4. **Shared Utilities**: Common functions and styles
 
 ## Contributing
 1. Fork the repository

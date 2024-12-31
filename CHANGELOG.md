@@ -2,6 +2,35 @@
 
 All notable changes to the Comment Generator Extension will be documented in this file.
 
+## [1.0.2] - 2024-12-31
+
+### Added
+- **Enhanced UI Components**
+  - Added aesthetic loading spinners for both Breakcold and LinkedIn
+  - Implemented "Use this Comment" button for each generated comment
+  - Added "Regenerate Comments" button with loading state
+  - Added close button to dismiss comment generation modal
+  - Added hover effects and transitions for better interactivity
+
+### Fixed
+- **LinkedIn Comment Generation**
+  - Fixed text extraction from LinkedIn posts by implementing comprehensive selector strategy
+  - Added support for multiple post content selectors:
+    - `.feed-shared-update-v2__description`
+    - `.feed-shared-text-view`
+    - `.feed-shared-inline-show-more-text`
+    - `.feed-shared-update__description`
+    - `.update-components-text`
+  - Improved post container detection reliability
+  - Fixed button injection in LinkedIn comment fields
+
+### Improved
+- **User Experience**
+  - Enhanced loading state visibility with centered, animated spinners
+  - Improved error message display and formatting
+  - Added smooth transitions for modal and loader states
+  - Better visual feedback for comment selection and regeneration
+
 ## [1.0.1] - 2024-12-31
 
 ### Fixed

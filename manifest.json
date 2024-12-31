@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "AI Comment Generator",
-  "version": "1.0",
-  "description": "Generate AI-powered comments for LinkedIn and Breakcold posts",
+  "version": "1.0.1",
+  "description": "Generate contextually relevant comments for LinkedIn and Breakcold posts",
   "permissions": [
     "activeTab",
-    "storage",
-    "scripting"
+    "storage"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
@@ -16,26 +15,26 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://*.linkedin.com/*"],
+      "matches": ["*://*.linkedin.com/*"],
       "js": [
-        "/shared/utils.js",
-        "/shared/api.js",
-        "/content/linkedin/linkedin-content.js"
+        "shared/api.js",
+        "shared/utils.js",
+        "content/linkedin/linkedin-content.js"
       ],
-      "css": ["/styles/styles.css"],
+      "css": ["styles/styles.css"],
       "run_at": "document_end"
     },
     {
       "matches": [
-        "https://*.breakcold.com/*",
-        "https://*.app.breakcold.com/*"
+        "*://*.breakcold.com/*",
+        "*://*.app.breakcold.com/*"
       ],
       "js": [
-        "/shared/utils.js",
-        "/shared/api.js",
-        "/content/breakcold/breakcold-content.js"
+        "shared/api.js",
+        "shared/utils.js",
+        "content/breakcold/breakcold-content.js"
       ],
-      "css": ["/styles/styles.css"],
+      "css": ["styles/styles.css"],
       "run_at": "document_end"
     }
   ],
@@ -43,13 +42,12 @@
     "resources": [
       "shared/*",
       "content/*",
-      "styles/*",
-      "images/*"
+      "styles/*"
     ],
     "matches": [
-      "https://*.linkedin.com/*",
-      "https://*.breakcold.com/*",
-      "https://*.app.breakcold.com/*"
+      "*://*.linkedin.com/*",
+      "*://*.breakcold.com/*",
+      "*://*.app.breakcold.com/*"
     ]
   }],
   "icons": {
@@ -57,7 +55,7 @@
     "128": "images/icon128.png"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "48": "images/icon48.png",
       "128": "images/icon128.png"

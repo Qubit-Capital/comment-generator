@@ -4,8 +4,7 @@ class CommentAPI {
         this.API_CONFIG = {
             studioId: 'e24e0d8f-55bc-42b3-b4c0-ef86b7f9746c',
             projectId: '8cdcb88c-3a0b-44b1-915e-09454e18f5e5',
-            baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios',
-            apiKey: '8cdcb88c-3a0b-44b1-915e-09454e18f5e5:sk-N2QxNjVkNmYtMGE1MS00ZDcyLTg0ZWMtOGY1OTZkNWUzMzhm'
+            baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios'
         };
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second delay between retries
@@ -51,8 +50,7 @@ class CommentAPI {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.API_CONFIG.apiKey}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         params: {

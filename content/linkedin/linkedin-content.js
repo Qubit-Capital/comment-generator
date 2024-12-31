@@ -2,289 +2,272 @@
 const DEBUG = true;
 const log = (...args) => DEBUG && console.log('[AI Comment Generator]', ...args);
 
-// Copy the entire content.js from linkedin-comment-generator
-const style = document.createElement('style');
-style.textContent = `
-    .comment-button {
-        background-color: #0a66c2;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 16px;
-        cursor: pointer;
-        font-size: 14px;
-        margin-right: 8px;
-        margin-bottom: 8px;
-    }
-    
-    .comment-button:hover {
-        background-color: #004182;
-    }
-
-    .comment-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-
-    .comment-modal.hidden {
-        display: none;
-    }
-
-    .modal-content {
-        background-color: white;
-        padding: 20px;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-        position: relative;
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .modal-header h2 {
-        margin: 0;
-        font-size: 18px;
-        color: #333;
-    }
-
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-    }
-
-    .comment-options {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .comment-option {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .comment-option:hover {
-        background-color: #f5f5f5;
-    }
-
-    .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-right: 8px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-`;
-
-document.head.appendChild(style);
-
 // Function to create comment modal
 function createCommentModal() {
     const modal = document.createElement('div');
-    modal.className = 'comment-modal hidden';
+    modal.className = 'comment-modal linkedin hidden';
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Choose a Comment</h2>
-                <button class="modal-close">&times;</button>
+                <h2>Generated Comments</h2>
+                <button class="modal-close" aria-label="Close">×</button>
             </div>
-            <div class="comment-options"></div>
+            <div class="loading-container hidden">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+                <div class="loading-text">Generating comments...</div>
+            </div>
+            <div class="error-message hidden"></div>
+            <div class="comments-list"></div>
         </div>
     `;
 
-    document.body.appendChild(modal);
-
+    // Close button handler
     modal.querySelector('.modal-close').addEventListener('click', () => {
         modal.classList.add('hidden');
+        setTimeout(() => {
+            modal.remove();
+        }, 300); // Match transition duration
     });
 
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.querySelector('.modal-close').click();
+        }
+    });
+
+    document.body.appendChild(modal);
     return modal;
 }
 
-// Function to display comment options
-function displayCommentOptions(comments, modal, commentField) {
-    const optionsContainer = modal.querySelector('.comment-options');
-    optionsContainer.innerHTML = '';
-
-    comments.forEach((comment) => {
-        const option = document.createElement('div');
-        option.className = 'comment-option';
+// Function to handle comment generation
+async function handleCommentGeneration(button) {
+    try {
+        const modal = createCommentModal();
+        document.body.appendChild(modal);
         
-        // Create type badge
-        const typeBadge = document.createElement('span');
-        typeBadge.className = 'comment-type';
-        typeBadge.textContent = comment.type;
-        
-        // Create comment text
-        const textSpan = document.createElement('span');
-        textSpan.className = 'comment-text';
-        textSpan.textContent = comment.text;
-        
-        // Add badge and text to option
-        option.appendChild(typeBadge);
-        option.appendChild(textSpan);
-        
-        option.addEventListener('click', () => {
-            // Insert into Quill editor if it's the active editor
-            if (commentField.classList.contains('ql-editor')) {
-                const quill = Quill.find(commentField);
-                if (quill) {
-                    quill.clipboard.dangerouslyPasteHTML(0, comment.text);
-                    quill.root.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            } else {
-                // For regular input fields
-                commentField.value = comment.text;
-                commentField.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            
-            modal.classList.add('hidden');
+        // Force reflow to trigger animation
+        modal.offsetHeight;
+        modal.classList.remove('hidden');
 
-            // Focus the comment field
-            commentField.focus();
-        });
+        const loadingContainer = modal.querySelector('.loading-container');
+        const errorMessage = modal.querySelector('.error-message');
         
-        optionsContainer.appendChild(option);
-    });
+        loadingContainer.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
 
-    // Show the modal
-    modal.classList.remove('hidden');
+        const postText = getPostText(button);
+        log('Successfully extracted post text:', postText);
 
-    // Add styles for the new elements if not already present
-    if (!document.querySelector('#comment-option-styles')) {
-        const style = document.createElement('style');
-        style.id = 'comment-option-styles';
-        style.textContent = `
-            .comment-option {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                padding: 12px;
-                border-bottom: 1px solid #e0e0e0;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
+        const comments = await window.CommentAPI.generateComments(postText, 'linkedin');
+        
+        loadingContainer.classList.add('hidden');
+        displayCommentOptions(comments, modal);
+        
+    } catch (error) {
+        log('Error generating comments:', error);
+        const modal = document.querySelector('.comment-modal');
+        if (modal) {
+            const loadingContainer = modal.querySelector('.loading-container');
+            const errorMessage = modal.querySelector('.error-message');
             
-            .comment-option:hover {
-                background-color: #f5f5f5;
-            }
-            
-            .comment-type {
-                font-size: 12px;
-                font-weight: 600;
-                color: #0a66c2;
-                text-transform: uppercase;
-            }
-            
-            .comment-text {
-                font-size: 14px;
-                color: #333;
-                line-height: 1.4;
-            }
-
-            .comment-modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999;
-            }
-            
-            .comment-modal.hidden {
-                display: none;
-            }
-            
-            .modal-content {
-                background-color: white;
-                padding: 20px;
-                border-radius: 8px;
-                width: 90%;
-                max-width: 600px;
-                max-height: 80vh;
-                overflow-y: auto;
-            }
-            
-            .modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-            }
-            
-            .modal-header h2 {
-                margin: 0;
-                font-size: 18px;
-                color: #333;
-            }
-            
-            .modal-close {
-                background: none;
-                border: none;
-                font-size: 24px;
-                cursor: pointer;
-                color: #666;
-            }
-        `;
-        document.head.appendChild(style);
+            loadingContainer.classList.add('hidden');
+            errorMessage.classList.remove('hidden');
+            errorMessage.innerHTML = `
+                <svg class="error-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM11 15H9V13H11V15ZM11 11H9V5H11V11Z" fill="currentColor"/>
+                </svg>
+                <span>Failed to generate comments. Please try again.</span>
+            `;
+        }
     }
 }
 
-// Function to find active Quill editor
-function findActiveQuillEditor() {
-    log('Finding active Quill editor...');
-    // Try to find the focused editor first
-    const activeElement = document.activeElement;
-    if (activeElement?.classList?.contains('ql-editor')) {
-        log('Found active Quill editor through focus');
-        return activeElement;
-    }
+// Function to display comment options
+function displayCommentOptions(comments, modal) {
+    const loadingContainer = modal.querySelector('.loading-container');
+    const commentsList = modal.querySelector('.comments-list');
+    const errorMessage = modal.querySelector('.error-message');
+    
+    // Hide loading and error states
+    loadingContainer.classList.add('hidden');
+    errorMessage.classList.add('hidden');
+    commentsList.innerHTML = '';
+    
+    // Add regenerate button
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'action-buttons';
+    actionButtons.innerHTML = `
+        <button class="regenerate-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C9.29583 2 10.4957 2.40132 11.5 3.0863" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M14 3V8H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Regenerate Comments
+        </button>
+    `;
 
-    // Look for visible editors
-    const editors = document.querySelectorAll('.ql-editor');
-    for (const editor of editors) {
-        const style = window.getComputedStyle(editor);
-        if (style.display !== 'none' && style.visibility !== 'hidden') {
-            log('Found visible Quill editor');
-            return editor;
+    // Add regenerate functionality
+    const regenerateBtn = actionButtons.querySelector('.regenerate-btn');
+    regenerateBtn.addEventListener('click', async () => {
+        try {
+            // Get post text again
+            const button = document.querySelector('.ai-comment-generator-btn');
+            const postText = getPostText(button);
+            
+            // Update loading text
+            const loadingText = loadingContainer.querySelector('.loading-text');
+            loadingText.textContent = 'Regenerating comments...';
+            
+            // Show loading state
+            loadingContainer.classList.remove('hidden');
+            commentsList.innerHTML = '';
+            
+            // Generate new comments
+            const newComments = await window.CommentAPI.generateComments(postText, 'linkedin');
+            displayCommentOptions(newComments, modal);
+            
+        } catch (error) {
+            console.error('Error regenerating comments:', error);
+            showNotification('Failed to regenerate comments', 'error');
         }
+    });
+
+    commentsList.appendChild(actionButtons);
+    
+    // Display comments
+    comments.forEach((comment, index) => {
+        const option = document.createElement('div');
+        option.className = 'comment-option';
+        
+        option.innerHTML = `
+            <div class="comment-text">${comment.text || comment}</div>
+            <button class="use-comment-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13.3332 4L5.99984 11.3333L2.6665 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Use this comment
+            </button>
+        `;
+        
+        const useButton = option.querySelector('.use-comment-btn');
+        useButton.addEventListener('click', () => {
+            const commentField = findCommentField(modal);
+            if (commentField) {
+                insertComment(commentField, comment.text || comment);
+                // Add hidden class to trigger transition
+                modal.classList.add('hidden');
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
+                showNotification('Comment added successfully!', 'success');
+            } else {
+                showNotification('Could not find comment field', 'error');
+            }
+        });
+        
+        commentsList.appendChild(option);
+    });
+}
+
+// Function to get post text
+function getPostText(button) {
+    try {
+        // Find the post container
+        const postContainer = button.closest('.feed-shared-update-v2') || 
+                            button.closest('.feed-shared-post') ||
+                            button.closest('.feed-shared-update');
+                            
+        if (!postContainer) {
+            throw new Error('Could not find post container');
+        }
+
+        // Try different possible post content selectors
+        const contentSelectors = [
+            '.feed-shared-update-v2__description',
+            '.feed-shared-text-view',
+            '.feed-shared-inline-show-more-text',
+            '.feed-shared-update__description',
+            '.update-components-text',
+            '.feed-shared-text',
+            '.feed-shared-article'
+        ];
+        
+        for (const selector of contentSelectors) {
+            const element = postContainer.querySelector(selector);
+            if (element) {
+                const text = element.textContent.trim();
+                if (text) {
+                    return text;
+                }
+            }
+        }
+
+        throw new Error('Could not find text container');
+    } catch (error) {
+        log('Error in getPostText:', error);
+        throw error;
+    }
+}
+
+// Function to insert comment
+function insertComment(field, text) {
+    if (!field || !text) return;
+    
+    // Set the value and dispatch input event
+    field.value = text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Focus the field
+    field.focus();
+}
+
+// Function to find comment field
+function findCommentField(modal) {
+    const button = document.querySelector('.ai-comment-generator-btn');
+    if (!button) return null;
+    
+    // Find the closest comment field
+    return button.closest('.comments-comment-box')?.querySelector('.comments-comment-box-comment__text-editor') || null;
+}
+
+// Function to show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+// Function to check if button should be injected
+function shouldInjectButton(commentField) {
+    // Skip if no comment field
+    if (!commentField) return false;
+
+    // Skip if field is not visible
+    if (commentField.offsetParent === null) return false;
+
+    // Skip if field is not editable
+    if (commentField.getAttribute('contenteditable') !== 'true' && 
+        !commentField.matches('.ql-editor') &&
+        !commentField.matches('.comments-comment-box__input') &&
+        !commentField.matches('.comments-comment-texteditor__input')) {
+        return false;
     }
 
-    log('No active Quill editor found');
-    return null;
+    return true;
 }
 
 // Function to inject button for comment field
@@ -310,7 +293,7 @@ function injectButtonForCommentField(commentField) {
     }
     
     // Look for existing button
-    const existingButton = container.querySelector('.comment-button');
+    const existingButton = container.querySelector('.ai-comment-generator-btn');
     if (existingButton) {
         log('Button already exists');
         return;
@@ -330,422 +313,18 @@ function injectButtonForCommentField(commentField) {
     
     // Create and inject button
     const button = createCommentButton();
-    button.addEventListener('click', () => handleCommentGeneration(commentField));
+    button.addEventListener('click', () => handleCommentGeneration(button));
     toolbar.insertBefore(button, toolbar.firstChild);
     log('Button injected successfully');
-}
-
-// Function to check if we should inject button
-function shouldInjectButton(field) {
-    if (!field || !field.isConnected) {
-        log('Field is invalid or not connected to DOM');
-        return false;
-    }
-
-    // Check if field is visible
-    const style = window.getComputedStyle(field);
-    if (style.display === 'none' || style.visibility === 'hidden') {
-        log('Field is not visible');
-        return false;
-    }
-
-    // Check if field is editable
-    if (field.getAttribute('contenteditable') === 'false' || field.disabled) {
-        log('Field is not editable');
-        return false;
-    }
-
-    // Check if button already exists
-    const container = field.closest('.comments-comment-box') || 
-                     field.closest('.editor-container') ||
-                     field.parentElement;
-    
-    if (container?.querySelector('.comment-button')) {
-        log('Button already exists for this field');
-        return false;
-    }
-
-    return true;
 }
 
 // Function to create comment button
 function createCommentButton() {
     const button = document.createElement('button');
-    button.className = 'comment-button';
+    button.className = 'ai-comment-generator-btn';
     button.innerHTML = 'Generate Comment';
     button.style.marginRight = '8px';
     return button;
-}
-
-// Function to handle comment generation
-async function handleCommentGeneration(target) {
-    log('Starting comment generation for:', target);
-    
-    const commentField = target.classList.contains('ql-editor') ? target : findActiveQuillEditor();
-    if (!commentField) {
-        log('Could not find comment field');
-        showNotification('Could not find comment field. Please try again.', 'error');
-        return;
-    }
-
-    const button = commentField.closest('.editor-container')?.querySelector('.comment-button') ||
-                  commentField.closest('.comments-comment-box')?.querySelector('.comment-button');
-    
-    if (button) {
-        button.disabled = true;
-        button.innerHTML = '<span class="loading-spinner"></span>Generating...';
-    }
-
-    try {
-        // Find the post content
-        const postElement = findPostElement(commentField);
-        if (!postElement) {
-            throw new Error('Could not find post content');
-        }
-
-        // Get the post text
-        const postText = await getPostText(postElement);
-        if (!postText) {
-            throw new Error('Could not extract post text');
-        }
-
-        log('Extracted post text:', postText);
-
-        // Get comment suggestions
-        const comments = await fetchCommentSuggestions(postText);
-        
-        // Get or create modal
-        const modal = createOrGetModal();
-        
-        // Display comments in modal
-        displayCommentOptions(comments, modal, commentField);
-        
-        // Show the modal explicitly
-        modal.classList.remove('hidden');
-
-    } catch (error) {
-        log('Error during comment generation:', error);
-        showNotification(error.message || 'Failed to generate comments. Please try again.', 'error');
-    } finally {
-        if (button) {
-            button.disabled = false;
-            button.innerHTML = 'Generate Comment';
-        }
-    }
-}
-
-// Function to find post element
-function findPostElement(commentField) {
-    log('Finding post element...');
-    const possibleContainers = [
-        // Main post containers
-        '.feed-shared-update-v2',
-        'article[data-id]',  // LinkedIn article posts
-        '.feed-shared-update-v2__content',
-        
-        // Specific content type containers
-        '.feed-shared-article',
-        '.feed-shared-external-video',
-        '.feed-shared-image',
-        '.feed-shared-poll',
-        '.feed-shared-document',
-        '.feed-shared-update-v2__content-wrapper',
-        
-        // Generic containers
-        'article',
-        '.feed-shared-update'
-    ];
-
-    for (const selector of possibleContainers) {
-        const container = commentField.closest(selector);
-        if (container) {
-            log('Found post container:', selector);
-            // If we found a child container, try to get the main post container
-            const mainContainer = container.closest('.feed-shared-update-v2') || container;
-            log('Using container:', mainContainer.className);
-            return mainContainer;
-        }
-    }
-
-    // Fallback: try to find the closest article-like container
-    log('No standard post container found, trying fallback method');
-    let element = commentField.parentElement;
-    while (element && element !== document.body) {
-        if (element.querySelector('.feed-shared-text') || 
-            element.querySelector('.feed-shared-update-v2__description') ||
-            element.querySelector('.update-components-text')) {
-            log('Found post container via fallback method');
-            return element;
-        }
-        element = element.parentElement;
-    }
-
-    log('No post container found');
-    return null;
-}
-
-// Utility function to wait for content to load
-async function waitForContent(element, maxAttempts = 10, interval = 1000) {
-    log('Waiting for content to load...');
-    for (let i = 0; i < maxAttempts; i++) {
-        const hasContent = element.textContent.trim().length > 0;
-        if (hasContent) {
-            log('Content loaded successfully');
-            return true;
-        }
-        log(`Attempt ${i + 1}/${maxAttempts}: Waiting for content...`);
-        await new Promise(resolve => setTimeout(resolve, interval));
-    }
-    log('Content loading timed out');
-    return false;
-}
-
-// Function to safely load extension resources
-function loadExtensionResource(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(url);
-        img.onerror = () => {
-            log(`Failed to load resource: ${url}`);
-            resolve(null); // Resolve with null instead of rejecting to prevent error spam
-        };
-        img.src = url;
-    });
-}
-
-// Function to get post text
-async function getPostText(postElement) {
-    log('Extracting post text from:', postElement);
-    
-    // Wait for content to load
-    const contentLoaded = await waitForContent(postElement);
-    if (!contentLoaded) {
-        log('Warning: Content did not load within timeout period');
-    }
-    
-    // Define priority ordered selectors for main post content
-    const mainContentSelectors = [
-        // Main post text selectors (most specific first)
-        '.feed-shared-update-v2__description-wrapper',
-        '.feed-shared-update-v2__commentary',
-        '.feed-shared-text-view span[dir="ltr"]',
-        '.feed-shared-text',
-        '.update-components-text',
-        
-        // Article content
-        '.feed-shared-article__description',
-        '.feed-shared-article__title',
-        
-        // Document content
-        '.feed-shared-document__description',
-        '.feed-shared-document__title',
-        
-        // Other content types
-        '.feed-shared-poll__question',
-        '.feed-shared-mini-update-v2__description',
-        '.feed-shared-update-v2__update-content-text'
-    ];
-    
-    let postText = '';
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (!postText && attempts < maxAttempts) {
-        attempts++;
-        log(`Extraction attempt ${attempts}/${maxAttempts}`);
-        
-        // Try each selector in priority order
-        for (const selector of mainContentSelectors) {
-            try {
-                const elements = postElement.querySelectorAll(selector);
-                log(`Checking selector "${selector}": found ${elements.length} elements`);
-                
-                for (const element of elements) {
-                    // Skip hidden elements
-                    if (!isElementVisible(element)) continue;
-                    
-                    // Get text content while filtering out unwanted elements
-                    const textNodes = Array.from(element.childNodes)
-                        .filter(node => {
-                            // Keep text nodes
-                            if (node.nodeType === Node.TEXT_NODE) return true;
-                            
-                            // For element nodes, filter out unwanted elements
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                // Skip buttons, links, images, and other interactive elements
-                                const isUnwanted = node.matches(
-                                    'button, a, img, [role="button"], ' +
-                                    '[class*="cursor-pointer"], [class*="button"], ' +
-                                    '[class*="icon"], [class*="emoji"], [class*="reaction"]'
-                                );
-                                
-                                // Skip elements with specific alt texts
-                                const altText = node.getAttribute('alt') || '';
-                                const hasUnwantedAlt = altText.includes('emoji') || 
-                                                     altText.includes('view') || 
-                                                     altText.includes('image');
-                                
-                                return !(isUnwanted || hasUnwantedAlt);
-                            }
-                            return false;
-                        })
-                        .map(node => node.textContent.trim())
-                        .filter(text => {
-                            // Filter out common UI text and unwanted content
-                            const unwantedPhrases = [
-                                'Activate to view',
-                                'Click to view',
-                                'View full post',
-                                'Show more',
-                                'Show less',
-                                'reactions',
-                                'comment',
-                                'like',
-                                'share'
-                            ];
-                            return text && !unwantedPhrases.some(phrase => 
-                                text.toLowerCase().includes(phrase.toLowerCase())
-                            );
-                        });
-                    
-                    const elementText = textNodes.join(' ');
-                    if (elementText) {
-                        log(`Found text in "${selector}":`, elementText.substring(0, 50) + '...');
-                        postText += ' ' + elementText;
-                    }
-                }
-                
-                if (postText.trim()) {
-                    break;
-                }
-            } catch (error) {
-                log(`Error checking selector "${selector}":`, error);
-                continue;
-            }
-        }
-        
-        if (!postText.trim() && attempts < maxAttempts) {
-            log('No text found, waiting before retry...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    }
-    
-    // Clean up the text
-    postText = postText.trim()
-        .replace(/\s+/g, ' ')
-        .replace(/[^\S\r\n]+/g, ' ')
-        .replace(/\n+/g, ' ')
-        .substring(0, 1000);
-    
-    log('Final extracted text length:', postText.length);
-    if (postText.length > 0) {
-        log('Text preview:', postText.substring(0, 100) + '...');
-    } else {
-        log('Warning: No text could be extracted from the post');
-    }
-    
-    return postText;
-}
-
-// Helper function to check if an element is visible
-function isElementVisible(element) {
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' && 
-           style.visibility !== 'hidden' && 
-           style.opacity !== '0' &&
-           element.offsetParent !== null;
-}
-
-// Function to preprocess post text
-function preprocessPostText(text) {
-    // Remove URLs
-    text = text.replace(/(?:https?|ftp):\/\/[\n\S]+/g, '');
-    
-    // Remove hashtags
-    text = text.replace(/#\w+/g, '');
-    
-    // Remove mentions
-    text = text.replace(/@\w+/g, '');
-    
-    // Remove multiple spaces and newlines
-    text = text.replace(/\s+/g, ' ');
-    
-    // Trim and limit length
-    text = text.trim().substring(0, 500);
-    
-    return text;
-}
-
-// Function to fetch comment suggestions
-async function fetchCommentSuggestions(postText) {
-    const API_CONFIG = {
-        studioId: 'e24e0d8f-55bc-42b3-b4c0-ef86b7f9746c',
-        projectId: '8cdcb88c-3a0b-44b1-915e-09454e18f5e5',
-        baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios'
-    };
-    
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const apiUrl = `${API_CONFIG.baseUrl}/${API_CONFIG.studioId}/trigger_limited`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    params: {
-                        linked_in_post: postText
-                    },
-                    project: API_CONFIG.projectId
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            log('API Response:', data);
-
-            if (!data.output || !data.output.answer) {
-                throw new Error('Invalid API response format');
-            }
-
-            let parsedAnswer = JSON.parse(data.output.answer.replace(/```json\n?|\n?```/g, '').trim());
-            log('Parsed Answer:', parsedAnswer);
-
-            if (!parsedAnswer || !Array.isArray(parsedAnswer.comments)) {
-                throw new Error('Invalid comments data format');
-            }
-
-            return parsedAnswer.comments;
-
-        } catch (error) {
-            log(`Error in attempt ${attempt}:`, error);
-            if (attempt === maxRetries) {
-                throw error;
-            }
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-        }
-    }
-}
-
-// Function to create or get modal
-function createOrGetModal() {
-    let modal = document.querySelector('.comment-modal');
-    if (!modal) {
-        modal = createCommentModal();
-    }
-    return modal;
-}
-
-// Function to show notification
-function showNotification(message, type = 'info') {
-    // You can implement a custom notification UI here
-    console.log(`${type.toUpperCase()}: ${message}`);
 }
 
 // Initialize button injection
