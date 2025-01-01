@@ -19,6 +19,7 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
+        "analytics-observer.js",
         "content/linkedin/linkedin-content.js"
       ],
       "css": ["styles/styles.css"],
@@ -32,25 +33,33 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
+        "analytics-observer.js",
         "content/breakcold/breakcold-content.js"
       ],
       "css": ["styles/styles.css"],
       "run_at": "document_end"
     }
   ],
-  "web_accessible_resources": [{
-    "resources": [
-      "shared/*",
-      "content/*",
-      "styles/*"
-    ],
-    "matches": [
-      "*://*.linkedin.com/*",
-      "*://*.breakcold.com/*",
-      "*://*.app.breakcold.com/*"
-    ]
-  }],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "shared/*",
+        "content/*",
+        "styles/*",
+        "analytics.html",
+        "analytics.js",
+        "analytics-handler.js",
+        "analytics-observer.js"
+      ],
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.breakcold.com/*",
+        "*://*.app.breakcold.com/*"
+      ]
+    }
+  ],
   "icons": {
+    "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
@@ -60,5 +69,8 @@
       "48": "images/icon48.png",
       "128": "images/icon128.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }

@@ -2,6 +2,35 @@
 
 All notable changes to the Comment Generator Extension will be documented in this file.
 
+## [Unreleased]
+
+## [1.1.0] - 2025-01-01
+
+### Added
+- Analytics system implementation
+  - Added analytics tracking for comment generation and usage
+  - Created analytics observer to track and store events
+  - Implemented analytics page with stats and timeline view
+  - Added platform and time range filtering
+- Analytics UI components
+  - Added analytics button to comment modals
+  - Created modern analytics dashboard design
+  - Implemented event timeline with color-coded cards
+  - Added filtering controls for better data analysis
+
+### Changed
+- Updated content scripts to track analytics events
+- Modified modal structure to include analytics button
+- Enhanced error handling and logging
+- Updated manifest to include analytics-related files
+- Improved loading state management in modals
+
+### Fixed
+- Fixed loading spinner visibility in LinkedIn
+- Fixed analytics button functionality in both platforms
+- Fixed modal transitions and animations
+- Improved error message display
+
 ## [1.0.2] - 2024-12-31
 
 ### Added
