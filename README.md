@@ -12,6 +12,12 @@ A Chrome extension that helps users generate contextually relevant comments on L
 - Comment regeneration capability
 - Smart post content extraction with comprehensive selectors
 - Elegant error handling with visual feedback
+- Advanced analytics tracking
+  - Comment generation and usage tracking
+  - Event timeline visualization
+  - Platform and time range filtering
+  - Robust error handling and retry mechanisms
+  - Secure data storage and transmission
 
 ## Installation
 
@@ -29,12 +35,14 @@ A Chrome extension that helps users generate contextually relevant comments on L
 5. Choose from multiple AI-generated suggestions by clicking "Use this Comment"
 6. Not satisfied? Click "Regenerate Comments" for new suggestions
 7. The selected comment will be automatically inserted into the comment field
+8. View analytics to track your comment generation and usage patterns
 
 ## Development
 
 ### Prerequisites
 - Chrome browser
 - Node.js and npm (for development)
+- MongoDB (for analytics storage)
 
 ### Setup
 ```bash
@@ -49,6 +57,10 @@ cd comment-generator
   - `linkedin/`: LinkedIn-specific integration
   - `breakcold/`: Breakcold-specific integration
 - `shared/`: Shared utilities and API integration
+- `analytics/`: Analytics tracking and visualization
+  - `analytics-observer.js`: Event tracking and storage
+  - `analytics-server.js`: Server-side analytics processing
+  - `analytics.js`: Analytics UI and visualization
 - `styles/`: CSS files for UI components
 
 ### Key Components

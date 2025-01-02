@@ -4,6 +4,30 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-01-02
+
+### Fixed
+- Fixed analytics data handling issues
+  - Resolved "[object Object]" text appearing in comment data by properly stringifying comment objects
+  - Fixed MongoDB duplicate key errors by generating new event IDs for retry attempts
+  - Added proper type checking and string conversion for comment data
+  - Improved error handling for sessionStorage operations
+- Enhanced error handling and logging
+  - Added detailed logging for server communication attempts
+  - Added retry delay information in logs
+  - Added better error context in analytics events
+
+### Changed
+- Improved analytics observer robustness
+  - Added array type checking for comments
+  - Enhanced comment text extraction from objects
+  - Added fallback to JSON.stringify for complex objects
+  - Improved session storage error handling
+- Enhanced retry mechanism
+  - Added new event ID generation for each retry attempt
+  - Improved exponential backoff logging
+  - Added better error context for failed attempts
+
 ## [1.1.0] - 2025-01-01
 
 ### Added
