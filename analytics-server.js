@@ -165,7 +165,8 @@ const CommentEventSchema = new mongoose.Schema({
                     enum: ['positive', 'negative', 'neutral'],
                     default: 'neutral'
                 },
-                keywords: [String]
+                keywords: [String],
+                confidence: { type: Number, default: 1.0 }
             }
         }],
         selectedComment: {
@@ -289,27 +290,102 @@ app.post('/api/analytics/event', async (req, res) => {
     try {
         const { event } = req.body;
         
-        // Record the event
-        const result = await eventOperations.recordEvent(event);
+        // Normalize platform to lowercase
+        if (event.platform) {
+            event.platform = event.platform.toLowerCase();
+        }
         
-        // If this is a generation event, also update the daily analytics
-        if (event.type === 'generation') {
-            await analyticsOperations.recordLinkedInGeneration({
-                userId: event.metadata.userAgent,
-                tone: event.data.generatedComments[0]?.tone || 'professional',
-                generationTime: event.performance.generationTime,
-                responseTime: event.performance.totalTime,
-                hasError: false
-            });
+        console.log('Processing event:', {
+            eventId: event.eventId,
+            platform: event.platform,
+            type: event.type
+        });
+        
+        // Record the event in EventAnalytics
+        const result = await eventOperations.recordEvent(event);
+        if (!result) {
+            throw new Error('Failed to record event in EventAnalytics');
+        }
+        
+        console.log('Processing platform-specific analytics for:', event.platform, 'Event type:', event.type);
+        console.log('Event metadata:', JSON.stringify(event.metadata, null, 2));
+
+        // Extract common parameters
+        const baseParams = {
+            eventId: event.eventId,
+            postId: event.postId,
+            date: new Date(event.metadata.timestamp),
+            timestamp: event.metadata.timestamp,
+            rawData: {
+                post: {
+                    text: event.data.sourcePost.text,
+                    metrics: event.data.sourcePost.metrics
+                },
+                comments: event.data.generatedComments.map(comment => ({
+                    id: comment.id,
+                    text: comment.text,
+                    tone: comment.tone,
+                    metrics: comment.metrics
+                })),
+                performance: event.performance
+            },
+            metadata: {
+                userAgent: event.metadata.userAgent,
+                url: event.metadata.url,
+                completionType: event.metadata.completionType
+            }
+        };
+
+        // Add selection data if present
+        if (event.type === 'selection' && event.data.selectedComment) {
+            baseParams.rawData.selectedComment = {
+                id: event.data.selectedComment.id,
+                text: event.data.selectedComment.text,
+                index: event.data.selectedComment.index,
+                metrics: event.data.selectedComment.metrics
+            };
+        }
+
+        // Route to platform-specific collection
+        if (event.platform === 'linkedin') {
+            await analyticsOperations.recordLinkedInEvent(baseParams);
+            console.log('LinkedIn analytics recorded successfully');
+        } else if (event.platform === 'breakcold') {
+            if (!event.metadata?.campaignId) {
+                throw new Error('campaignId is required for BreakCold events');
+            }
+            
+            // Add BreakCold specific fields
+            const breakcoldParams = {
+                ...baseParams,
+                campaignId: event.metadata.campaignId
+            };
+            console.log('BreakCold params:', JSON.stringify({
+                eventId: breakcoldParams.eventId,
+                campaignId: breakcoldParams.campaignId,
+                metadata: breakcoldParams.metadata
+            }, null, 2));
+            
+            await analyticsOperations.recordBreakColdEvent(breakcoldParams);
+            console.log('BreakCold analytics recorded successfully');
+        } else {
+            throw new Error(`Unsupported platform: ${event.platform}`);
         }
         
         res.json({ success: true, result });
     } catch (error) {
         console.error('Error processing analytics event:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
+        console.error('Error stack:', error.stack);
+        
+        // Enhanced error response
+        const errorResponse = {
+            success: false,
+            error: error.message,
+            details: error.name === 'ValidationError' ? error.errors : undefined,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        };
+        
+        res.status(500).json(errorResponse);
     }
 });
 

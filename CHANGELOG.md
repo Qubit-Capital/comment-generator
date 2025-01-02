@@ -4,6 +4,20 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-01-02
+
+### Fixed
+- Fixed BreakCold analytics not being captured in EventAnalytics collection
+- Fixed platform case sensitivity issues in analytics processing
+- Enhanced error handling and validation for analytics events
+- Added proper validation for BreakCold campaignId
+- Improved logging for debugging analytics issues
+
+### Changed
+- Platform names are now normalized to lowercase before processing
+- Enhanced error responses with more detailed information
+- Added validation checks for required fields in BreakCold events
+
 ## [1.1.4] - 2025-01-02
 
 ### Fixed
