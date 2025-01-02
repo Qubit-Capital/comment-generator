@@ -4,6 +4,21 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [1.1.4] - 2025-01-02
+
+### Fixed
+- Added missing sourcePost field to CommentEventSchema in MongoDB
+  - Added proper validation for post text and metrics
+  - Fixed data persistence for post content
+  - Added schema validation for sentiment values
+  - Improved data structure for post metrics
+
+### Changed
+- Enhanced MongoDB schema validation
+  - Added required fields for post data
+  - Added enum validation for sentiment values
+  - Added minimum value validation for metrics
+
 ## [1.1.3] - 2025-01-02
 
 ### Added

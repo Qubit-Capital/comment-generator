@@ -20,6 +20,19 @@ A Chrome extension that helps users generate contextually relevant comments on L
   - Success rate tracking
   - Real-time statistics
   - Post samples visualization
+  - Comprehensive post data storage and analysis
+
+## Analytics Data Structure
+
+The extension stores detailed analytics data including:
+- Post content and metrics
+  - Text content
+  - Length metrics
+  - Sentiment analysis
+  - Keyword extraction
+- Generated comments with metrics
+- Selection tracking
+- Performance metrics
 
 ## Installation
 

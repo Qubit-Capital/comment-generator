@@ -4,7 +4,7 @@
 LinkedIn Comment Generator Chrome Extension that helps users generate contextually relevant comments on LinkedIn posts.
 
 ## Current State
-- Version: 1.1.1
+- Version: 1.1.4
 - Platform: Chrome Extension
 - Main Integration: LinkedIn, Breakcold
 - API: Relevance API (https://api-bcbe5a.stack.tryrelevance.com/latest/studios)
@@ -13,12 +13,13 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 ## Key Components
 
 ### 1. Content Scripts
-- **linkedin-content.js**: Main content script for LinkedIn integration
+- **linkedin-content.js** & **breakcold-content.js**: Platform-specific integrations
   - Enhanced post text extraction with multiple selectors
   - Improved UI with loading states and animations
   - Modal-based comment selection with regeneration
   - Smooth transitions and error handling
-  - Analytics event tracking integration
+  - Event dispatching for analytics tracking
+  - Custom event handling for modal actions
 
 ### 2. Analytics System
 - **analytics-observer.js**: Core analytics tracking
@@ -26,7 +27,9 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
   - Robust error handling and retry mechanism
   - Session storage management
   - Data validation and formatting
-  - Event ID management for retries
+  - Event deduplication with compound indexes
+  - Pending event management
+  - Modal close action tracking
 
 - **Event Types**:
   - Generation Events:
@@ -37,6 +40,14 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
         type: 'generation',
         platform: string,
         data: {
+            sourcePost: {
+                text: string,
+                metrics: {
+                    length: number,
+                    sentiment: string,
+                    keywords: string[]
+                }
+            },
             generatedComments: Array<{
                 id: uuid,
                 text: string,
@@ -47,7 +58,13 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
                     sentiment: string,
                     keywords: string[]
                 }
-            }>
+            }>,
+            closeReason: 'close_button' | 'outside_click' | null
+        },
+        metadata: {
+            completionType: 'selection' | 'no_selection',
+            timestamp: string,
+            browserInfo: string
         }
     }
     ```
@@ -59,6 +76,7 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
         type: 'selection',
         platform: string,
         data: {
+            sourcePost: {...},
             selectedComment: {
                 id: uuid,
                 text: string,
@@ -66,40 +84,62 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
                 metrics: {...}
             },
             generatedComments: Array<...>
+        },
+        metadata: {
+            completionType: 'selection',
+            timestamp: string,
+            browserInfo: string
         }
     }
     ```
 
-### 3. API Integration
-- Direct API calls without shared library
-- Request Structure:
-```javascript
-{
-    params: {
-        linked_in_post: postText
-    },
-    project: projectId
-}
-```
-- Implements retry mechanism with exponential backoff
-- Handles markdown-wrapped JSON responses
+### 3. MongoDB Schema
+- **CommentEventSchema**: Core schema for tracking events
+  ```javascript
+  {
+    data: {
+      sourcePost: {
+        text: String,       // Required
+        metrics: {
+          length: Number,   // Required, min: 0
+          sentiment: String,// enum: ['positive', 'negative', 'neutral']
+          keywords: [String]
+        }
+      },
+      generatedComments: [...],
+      selectedComment: {...}
+    }
+  }
+  ```
 
-### 4. UI Components
+### 4. Analytics Dashboard
+- **analytics.html**: Main analytics interface
+  - Real-time statistics display
+  - Post samples visualization
+  - Comment generation trends
+  - Success rate tracking
+  - Platform filtering
+  - Time range selection
+  - Post text analysis
+  - Comment metrics visualization
+
+### 5. UI Components
 - Enhanced modal-based comment selection
 - Loading spinners with platform-specific styling
 - Regenerate button with loading state
 - Close button for modal dismissal
 - Analytics visualization dashboard
+- Post samples display with metrics
 - Type badges for different comment styles:
   - Friendly
   - Encouraging
   - Neutral
   - Positive
   - Curious
-- LinkedIn-styled interface
+- Platform-specific styling
 - Responsive design with smooth transitions
 
-### 5. Error Handling
+### 6. Error Handling
 - Comprehensive error handling for:
   - API failures with retry mechanism
   - Analytics event processing
@@ -119,13 +159,12 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 6. Follow MongoDB best practices for event storage
 7. Keep UI responsive during async operations
 
-## Recent Changes
-1. Added aesthetic loading spinners
-2. Implemented comment selection UI
-3. Added regenerate functionality
-4. Enhanced text extraction reliability
-5. Improved error handling and user feedback
-6. Integrated analytics system
+## Recent Updates
+1. Added post text analytics display
+2. Enhanced event tracking for modal actions
+3. Improved analytics dashboard layout
+4. Added event deduplication
+5. Enhanced data structure for analytics
 
 ## Known Issues
 - Need to handle dynamic content loading better
@@ -134,11 +173,18 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - Analytics dashboard needs polishing
 
 ## Next Steps
-1. Further improve Breakcold integration
-2. Add more comment types
-3. Enhance mobile support
-4. Add analytics visualization
-5. Implement user preferences
+1. Implement comment regeneration analytics
+2. Add more detailed post analysis
+3. Enhance mobile responsiveness
+4. Add export functionality for analytics
+5. Implement user preferences storage
+
+## Testing Priorities
+1. Verify post text capture
+2. Test modal close actions
+3. Check analytics data accuracy
+4. Validate mobile display
+5. Test dashboard performance
 
 ## Technical Details
 
@@ -169,14 +215,6 @@ The extension interacts with both LinkedIn and Breakcold DOM structures:
 3. Handle errors gracefully with visual feedback
 4. Implement smooth transitions
 5. Clean up resources properly
-
-## Testing Requirements
-1. Test on different post types
-2. Verify API integration
-3. Check error scenarios
-4. Validate mobile display
-5. Test performance
-6. Test analytics event tracking
 
 ## Important Files
 - manifest.json: Extension configuration
