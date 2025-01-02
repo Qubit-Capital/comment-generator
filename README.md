@@ -16,8 +16,10 @@ A Chrome extension that helps users generate contextually relevant comments on L
   - Comment generation and usage tracking
   - Event timeline visualization
   - Platform and time range filtering
-  - Robust error handling and retry mechanisms
-  - Secure data storage and transmission
+  - Post text analysis and metrics
+  - Success rate tracking
+  - Real-time statistics
+  - Post samples visualization
 
 ## Installation
 
@@ -36,6 +38,16 @@ A Chrome extension that helps users generate contextually relevant comments on L
 6. Not satisfied? Click "Regenerate Comments" for new suggestions
 7. The selected comment will be automatically inserted into the comment field
 8. View analytics to track your comment generation and usage patterns
+
+## Analytics Dashboard
+
+The extension includes a comprehensive analytics dashboard that shows:
+- Total generations and success rate
+- Average response time and unique posts
+- Comment generation trends
+- Post samples with metrics (length, sentiment, keywords)
+- Platform-specific statistics
+- Time-based filtering options
 
 ## Development
 
@@ -59,14 +71,15 @@ cd comment-generator
 - `shared/`: Shared utilities and API integration
 - `analytics/`: Analytics tracking and visualization
   - `analytics-observer.js`: Event tracking and storage
-  - `analytics-server.js`: Server-side analytics processing
   - `analytics.js`: Analytics UI and visualization
+  - `analytics.html`: Analytics dashboard
 - `styles/`: CSS files for UI components
+- `db/`: Database schemas and operations
 
 ### Key Components
-1. **Content Scripts**: Handle platform-specific integrations
+1. **Content Scripts**: Handle platform-specific integrations and event dispatching
 2. **UI Components**: Loading spinners, modals, and buttons
-3. **API Integration**: Communicates with Relevance API
+3. **Analytics System**: Event tracking, storage, and visualization
 4. **Shared Utilities**: Common functions and styles
 
 ## Contributing

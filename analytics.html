@@ -127,6 +127,21 @@
         .error-message button:hover {
             background: #aa0000;
         }
+
+        /* Post Samples Section */
+        .post-samples {
+            margin-top: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .post-samples h2 {
+            margin: 0 0 20px;
+            color: #1a1a1a;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -134,32 +149,59 @@
         <div class="header">
             <h1>Comment Generator Analytics</h1>
             <div class="filters">
-                <select id="platform-filter">
+                <select id="platformSelect">
                     <option value="all">All Platforms</option>
                     <option value="linkedin">LinkedIn</option>
                     <option value="breakcold">Breakcold</option>
                 </select>
-                <select id="time-range">
+                <select id="timeRangeSelect">
                     <option value="7">Last 7 days</option>
                     <option value="30" selected>Last 30 days</option>
                     <option value="90">Last 90 days</option>
                 </select>
+                <button id="refreshBtn">Refresh</button>
             </div>
         </div>
 
-        <div id="analytics-container">
-            <div id="analytics-stats" class="stats-container">
-                <!-- Stats will be inserted here -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total Generations</h3>
+                <p id="totalGenerations">0</p>
             </div>
-            
-            <h2>Recent Activity</h2>
-            <div id="analytics-events" class="events-container">
-                <!-- Events will be inserted here -->
+            <div class="stat-card">
+                <h3>Success Rate</h3>
+                <p id="successRate">0%</p>
             </div>
+            <div class="stat-card">
+                <h3>Avg Response Time</h3>
+                <p id="avgResponseTime">0ms</p>
+            </div>
+            <div class="stat-card">
+                <h3>Unique Posts</h3>
+                <p id="userGrowth">0</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <h2>Generation Trends</h2>
+                <canvas id="generationsChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <h2>Comment Tone Distribution</h2>
+                <canvas id="toneChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Post Samples Section -->
+        <div class="post-samples">
+            <h2>Recent Posts</h2>
+            <div id="postSamples"></div>
         </div>
     </div>
 
     <script src="analytics-observer.js"></script>
-    <script src="analytics-handler.js"></script>
+    <script src="analytics.js"></script>
 </body>
 </html>

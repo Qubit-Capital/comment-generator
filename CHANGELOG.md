@@ -4,6 +4,22 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [1.1.3] - 2025-01-02
+
+### Added
+- Post text analytics display
+  - Added post samples section to analytics dashboard
+  - Included post metrics (length, sentiment, keywords)
+  - Added post generation and selection statistics
+  - Enhanced MongoDB queries to include post data
+
+### Changed
+- Improved analytics dashboard layout
+  - Added responsive design for post samples
+  - Enhanced stats card layout
+  - Updated success rate calculation
+  - Added refresh button
+
 ## [1.1.2] - 2025-01-02
 
 ### Added
@@ -71,12 +87,6 @@ All notable changes to the Comment Generator Extension will be documented in thi
 - Enhanced error handling and logging
 - Updated manifest to include analytics-related files
 - Improved loading state management in modals
-
-### Fixed
-- Fixed loading spinner visibility in LinkedIn
-- Fixed analytics button functionality in both platforms
-- Fixed modal transitions and animations
-- Improved error message display
 
 ## [1.0.2] - 2024-12-31
 
