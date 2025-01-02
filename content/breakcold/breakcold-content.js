@@ -210,6 +210,15 @@ function createCommentModal() {
 
     // Close button handler
     modal.querySelector('.modal-close').addEventListener('click', () => {
+        // Dispatch close event before hiding modal
+        const closeEvent = new CustomEvent('popupClose', {
+            detail: {
+                postId: sessionStorage.getItem('currentPostId'),
+                closeType: 'close_button'
+            }
+        });
+        document.dispatchEvent(closeEvent);
+
         modal.classList.add('hidden');
         setTimeout(() => {
             modal.remove();
@@ -227,6 +236,15 @@ function createCommentModal() {
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+            // Dispatch outside click event before closing
+            const clickEvent = new CustomEvent('popupOutsideClick', {
+                detail: {
+                    postId: sessionStorage.getItem('currentPostId'),
+                    closeType: 'outside_click'
+                }
+            });
+            document.dispatchEvent(clickEvent);
+
             modal.querySelector('.modal-close').click();
         }
     });
@@ -291,25 +309,47 @@ function displayCommentOptions(comments, modal, button) {
     modal.classList.remove('hidden');
 }
 
-// Function to insert comment into the comment field
-function insertComment(commentField, text) {
-    if (!commentField || !text) return;
-    
-    // Set the text content
-    commentField.textContent = text;
-    
-    // Dispatch necessary events
-    commentField.dispatchEvent(new Event('input', { bubbles: true }));
-    commentField.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Focus the field
-    commentField.focus();
-}
-
 // Function to find comment field
 function findCommentField(button) {
-    const commentField = button.closest('.relative')?.querySelector('textarea');
-    return commentField;
+    // First try to find the textarea within the closest relative container
+    const relativeContainer = button.closest('.relative');
+    if (relativeContainer) {
+        const textarea = relativeContainer.querySelector('textarea');
+        if (textarea) return textarea;
+    }
+
+    // Fallback: Look for the closest comment field container
+    const commentContainer = button.closest('.comment-generator-container')?.parentElement;
+    if (commentContainer) {
+        const textarea = commentContainer.querySelector('textarea');
+        if (textarea) return textarea;
+    }
+
+    // Final fallback: Look for any textarea in the post container
+    const postContainer = button.closest('.post-container, .feed-item');
+    if (postContainer) {
+        const textarea = postContainer.querySelector('textarea');
+        if (textarea) return textarea;
+    }
+
+    return null;
+}
+
+// Function to insert comment
+function insertComment(field, text) {
+    if (!field || !text) return;
+    
+    // Set the value
+    field.value = text;
+    
+    // Create and dispatch input event
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Create and dispatch change event
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Focus the field
+    field.focus();
 }
 
 // Function to show notification

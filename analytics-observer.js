@@ -4,7 +4,79 @@ class AnalyticsObserver {
         this.ANALYTICS_SERVER = 'http://localhost:3000/api/analytics';
         this.MAX_RETRIES = 3;
         this.RETRY_DELAY = 1000; // 1 second
+        this.pendingGenerations = new Map(); // Store pending generation events
         this.initStorage();
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Listen for popup close button click
+        document.addEventListener('popupClose', (event) => {
+            const postId = event.detail?.postId || sessionStorage.getItem('currentPostId');
+            if (postId) {
+                console.log('Popup close event received:', event.detail);
+                this.handleGenerationComplete(postId, 'close_button');
+            }
+        });
+
+        // Listen for click outside popup
+        document.addEventListener('popupOutsideClick', (event) => {
+            const postId = event.detail?.postId || sessionStorage.getItem('currentPostId');
+            if (postId) {
+                console.log('Popup outside click event received:', event.detail);
+                this.handleGenerationComplete(postId, 'outside_click');
+            }
+        });
+    }
+
+    async handleGenerationComplete(postId, closeReason) {
+        try {
+            const pendingData = this.pendingGenerations.get(postId);
+            if (!pendingData) {
+                console.log('No pending generation found for postId:', postId);
+                return;
+            }
+
+            console.log('Handling generation complete:', { postId, closeReason, pendingData });
+
+            // Get stored comments for context
+            const storedComments = JSON.parse(sessionStorage.getItem('generatedComments') || '[]');
+            const postText = sessionStorage.getItem('currentPostText') || '';
+
+            const event = {
+                ...pendingData.event,
+                data: {
+                    ...pendingData.event.data,
+                    sourcePost: {
+                        text: postText,
+                        metrics: {
+                            length: postText.length,
+                            sentiment: this.analyzeSentiment(postText),
+                            keywords: this.extractKeywords(postText)
+                        }
+                    },
+                    generatedComments: storedComments,
+                    closeReason,
+                    selectedComment: null // Explicitly show no selection was made
+                },
+                metadata: {
+                    ...pendingData.event.metadata,
+                    completionType: 'no_selection',
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            await this.saveAndSendEvent(event);
+            this.pendingGenerations.delete(postId);
+            console.log('Generation complete event sent and cleaned up');
+
+            // Clear session storage
+            sessionStorage.removeItem('currentPostId');
+            sessionStorage.removeItem('generatedComments');
+            sessionStorage.removeItem('currentPostText');
+        } catch (error) {
+            console.error('Error handling generation complete:', error);
+        }
     }
 
     async initStorage() {
@@ -35,12 +107,12 @@ class AnalyticsObserver {
             console.log('Generating comments with data:', {
                 platform,
                 postId,
-                commentsCount: Array.isArray(comments) ? comments.length : 0
+                commentsCount: Array.isArray(comments) ? comments.length : 0,
+                postText: postText || 'No post text available'
             });
 
-            // Map comments with proper structure, ensuring each comment is properly stringified
+            // Map comments with proper structure
             const formattedComments = (Array.isArray(comments) ? comments : []).map((comment, index) => {
-                // Ensure comment is properly stringified if it's an object
                 const commentText = typeof comment === 'object' ? 
                     (comment.text || JSON.stringify(comment)) : 
                     String(comment || '');
@@ -56,19 +128,14 @@ class AnalyticsObserver {
                         keywords: this.extractKeywords(commentText)
                     }
                 };
-                console.log(`Comment ${index} data:`, commentData);
                 return commentData;
             });
 
-            // Store in session storage with proper error handling
+            // Store in session storage
             try {
                 sessionStorage.setItem('currentPostId', postId);
                 sessionStorage.setItem('generatedComments', JSON.stringify(formattedComments));
-                
-                console.log('Stored in sessionStorage:', {
-                    postId,
-                    comments: JSON.parse(sessionStorage.getItem('generatedComments'))
-                });
+                sessionStorage.setItem('currentPostText', postText || '');
             } catch (storageError) {
                 console.error('Error storing in sessionStorage:', storageError);
             }
@@ -79,6 +146,14 @@ class AnalyticsObserver {
                 type: 'generation',
                 platform,
                 data: {
+                    sourcePost: {
+                        text: postText || '',
+                        metrics: {
+                            length: String(postText || '').length,
+                            sentiment: this.analyzeSentiment(postText),
+                            keywords: this.extractKeywords(postText)
+                        }
+                    },
                     generatedComments: formattedComments
                 },
                 performance: {
@@ -88,29 +163,18 @@ class AnalyticsObserver {
                 metadata: {
                     browserInfo: navigator.userAgent,
                     userAgent: navigator.userAgent,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    url: postMetadata.url || window.location.href
                 }
             };
 
-            console.log('Sending generation event:', JSON.stringify(event, null, 2));
+            // Store in pending generations
+            this.pendingGenerations.set(postId, {
+                event,
+                timestamp: Date.now()
+            });
 
-            const post = {
-                postId,
-                platform,
-                metadata: {
-                    url: postMetadata.url || window.location.href,
-                    authorName: postMetadata.authorName || 'Unknown',
-                    postContent: String(postText || ''),
-                    postType: 'text',
-                    engagement: {
-                        likes: 0,
-                        comments: 0,
-                        shares: 0
-                    }
-                }
-            };
-
-            await this.saveAndSendEvent(event, post);
+            console.log('Generation event stored in pending:', postId);
             return postId;
         } catch (error) {
             console.error('Error tracking comment generation:', error);
@@ -127,70 +191,64 @@ class AnalyticsObserver {
                 }
             }
 
-            console.log('Selection started with:', {
+            const pendingData = this.pendingGenerations.get(postId);
+            if (!pendingData) {
+                throw new Error('No pending generation found for this selection');
+            }
+
+            // Get the stored post text and comments
+            const postText = sessionStorage.getItem('currentPostText') || '';
+            const storedComments = JSON.parse(sessionStorage.getItem('generatedComments') || '[]');
+
+            console.log('Selection data:', {
                 platform,
                 postId,
-                selectedComment
+                selectedComment,
+                pendingData
             });
-
-            // Get the stored generated comments
-            const storedComments = sessionStorage.getItem('generatedComments');
-            console.log('Retrieved from sessionStorage:', storedComments);
-
-            const generatedComments = JSON.parse(storedComments || '[]');
-            console.log('Parsed generated comments:', generatedComments);
-
-            // Find the selected comment's full data
-            const selectedCommentData = generatedComments[selectedComment.index] || {
-                id: crypto.randomUUID(),
-                text: String(selectedComment.text || ''),
-                index: selectedComment.index,
-                metrics: {
-                    length: String(selectedComment.text || '').length,
-                    sentiment: this.analyzeSentiment(selectedComment.text),
-                    keywords: this.extractKeywords(selectedComment.text)
-                }
-            };
-
-            console.log('Selected comment data:', selectedCommentData);
 
             const startTime = performance.now();
             const event = {
-                eventId: crypto.randomUUID(),
-                postId,
+                ...pendingData.event,
                 type: 'selection',
-                platform,
                 data: {
-                    selectedComment: {
-                        id: selectedCommentData.id,
-                        text: selectedCommentData.text,
-                        index: selectedCommentData.index,
-                        isRegenerated: false,
-                        metrics: selectedCommentData.metrics // Include metrics in selection
-                    },
-                    generatedComments: generatedComments.map(comment => ({
-                        ...comment,
+                    ...pendingData.event.data,
+                    sourcePost: {
+                        text: postText,
                         metrics: {
-                            length: String(comment.text || '').length,
-                            sentiment: comment.metrics?.sentiment || this.analyzeSentiment(comment.text),
-                            keywords: comment.metrics?.keywords || this.extractKeywords(comment.text)
+                            length: postText.length,
+                            sentiment: this.analyzeSentiment(postText),
+                            keywords: this.extractKeywords(postText)
                         }
-                    }))
-                },
-                performance: {
-                    selectionTime: performance.now() - startTime,
-                    totalTime: performance.now() - startTime
+                    },
+                    selectedComment: {
+                        id: selectedComment.id || storedComments[selectedComment.index]?.id || crypto.randomUUID(),
+                        text: selectedComment.text,
+                        index: selectedComment.index,
+                        isRegenerated: false,
+                        metrics: {
+                            length: selectedComment.text.length,
+                            sentiment: this.analyzeSentiment(selectedComment.text),
+                            keywords: this.extractKeywords(selectedComment.text)
+                        }
+                    },
+                    generatedComments: storedComments
                 },
                 metadata: {
-                    browserInfo: navigator.userAgent,
-                    userAgent: navigator.userAgent,
+                    ...pendingData.event.metadata,
+                    completionType: 'selection',
                     timestamp: new Date().toISOString()
+                },
+                performance: {
+                    ...pendingData.event.performance,
+                    selectionTime: performance.now() - startTime,
+                    totalTime: pendingData.event.performance.generationTime + (performance.now() - startTime)
                 }
             };
 
-            console.log('Sending selection event:', JSON.stringify(event, null, 2));
-
             await this.saveAndSendEvent(event);
+            this.pendingGenerations.delete(postId);
+            console.log('Selection event sent and cleaned up');
         } catch (error) {
             console.error('Error tracking comment selection:', error);
             throw error;

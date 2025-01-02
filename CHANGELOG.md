@@ -4,6 +4,29 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-01-02
+
+### Added
+- Enhanced analytics event tracking
+  - Added tracking for popup close actions (close button and outside clicks)
+  - Implemented event deduplication using compound indexes
+  - Added completion type tracking ('selection' vs 'no_selection')
+  - Added close reason tracking for non-selection cases
+
+### Changed
+- Improved analytics data structure
+  - Consolidated generation and selection events into single events
+  - Enhanced event schema with new fields for close actions
+  - Added proper cleanup of pending events
+  - Improved session storage management
+
+### Fixed
+- Fixed duplicate analytics events issue
+  - Implemented proper event handling for modal close actions
+  - Added proper event cleanup after processing
+  - Fixed missing data in non-selection events
+  - Resolved multiple event generation for single actions
+
 ## [1.1.1] - 2025-01-02
 
 ### Fixed
