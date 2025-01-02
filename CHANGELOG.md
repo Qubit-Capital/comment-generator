@@ -4,6 +4,18 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-01-02
+
+### Breaking Changes
+- Major version bump to v2
+- Updated all dependencies to latest versions
+- Improved error handling and validation across the application
+
+### Added
+- Comprehensive test suite for analytics
+- Enhanced logging for better debugging
+- Platform-specific analytics with improved validation
+
 ## [1.1.5] - 2025-01-02
 
 ### Fixed
