@@ -1,10 +1,13 @@
-# Project Context
+# Project Context and Development Notes
+
+## Overview
+The Comment Generator Extension is a browser extension that helps users generate contextual comments on LinkedIn and BreakCold platforms. It includes comprehensive analytics tracking while maintaining a clean and simple user interface.
 
 ## Project Overview
 LinkedIn Comment Generator Chrome Extension that helps users generate contextually relevant comments on LinkedIn posts.
 
 ## Current State
-- Version: 1.1.4
+- Version: 2.0.0
 - Platform: Chrome Extension
 - Main Integration: LinkedIn, Breakcold
 - API: Relevance API (https://api-bcbe5a.stack.tryrelevance.com/latest/studios)
@@ -150,6 +153,110 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - User-friendly error messages
 - Fallback mechanisms for data recovery
 
+## Recent Changes (v2.0.0)
+
+### Analytics System Improvements
+1. **Platform-Specific Models**
+   - Created separate models for LinkedIn and BreakCold analytics
+   - Improved data organization and querying efficiency
+   - Added proper collection names and indexes
+
+2. **Regeneration Tracking**
+   - Added comprehensive tracking of comment regeneration history
+   - Implemented unique regeneration IDs
+   - Stored previous comments for analysis
+
+3. **UI Enhancements**
+   - Removed individual regenerate buttons for cleaner interface
+   - Removed analytics UI button while maintaining background tracking
+   - Improved comment type display and formatting
+   - Enhanced error messages and loading states
+
+### Technical Improvements
+1. **Database Operations**
+   - Fixed duplicate key errors in MongoDB collections
+   - Improved index handling
+   - Enhanced error handling in database operations
+
+2. **Code Organization**
+   - Converted to ESM imports/exports
+   - Improved state management
+   - Enhanced error handling and logging
+
+3. **Comment Generation Flow**
+   - Updated to use CommentAPI directly
+   - Improved handling of comment types and tones
+   - Enhanced session-based tracking
+
+## Design Decisions
+
+### Analytics Tracking
+- Decision: Keep analytics tracking in background without UI visibility
+- Rationale: Maintain data collection for improvement while simplifying user interface
+- Implementation: Removed analytics button but kept tracking functionality
+
+### Comment Types
+- Decision: Enhanced comment type handling and display
+- Rationale: Improve user understanding of comment styles
+- Implementation: Added proper type extraction and formatting
+
+### Modal Design
+- Decision: Simplified modal interface
+- Rationale: Focus on core functionality
+- Implementation: Removed redundant buttons and streamlined UI
+
+## Future Considerations
+
+1. **Performance Optimization**
+   - Monitor analytics data volume
+   - Consider implementing data aggregation
+   - Optimize database queries
+
+2. **Feature Enhancements**
+   - Consider adding more comment types
+   - Explore AI improvements for better context understanding
+   - Consider adding customization options
+
+3. **Technical Debt**
+   - Regular index optimization
+   - Monitoring of analytics storage usage
+   - Regular testing of regeneration tracking
+
+## Testing Notes
+
+### Test Cases
+1. Comment Generation
+   - Initial generation
+   - Regeneration with history
+   - Error handling
+
+2. Analytics Tracking
+   - Generation events
+   - Selection events
+   - Regeneration history
+
+3. UI Components
+   - Modal behavior
+   - Loading states
+   - Error messages
+
+## Deployment Notes
+
+### Prerequisites
+- MongoDB setup
+- Node.js environment
+- Chrome browser
+
+### Configuration
+- Environment variables for MongoDB
+- Analytics server settings
+- API endpoints
+
+### Monitoring
+- Database performance
+- Analytics data growth
+- Error rates and types
+
 ## Best Practices
 1. Always generate new event IDs for retry attempts
 2. Properly stringify and validate all data before storage
@@ -158,63 +265,6 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 5. Ensure data integrity in storage operations
 6. Follow MongoDB best practices for event storage
 7. Keep UI responsive during async operations
-
-## Recent Updates
-1. Added post text analytics display
-2. Enhanced event tracking for modal actions
-3. Improved analytics dashboard layout
-4. Added event deduplication
-5. Enhanced data structure for analytics
-
-## Known Issues
-- Need to handle dynamic content loading better
-- Could improve error recovery
-- Mobile responsiveness needs testing
-- Analytics dashboard needs polishing
-
-## Next Steps
-1. Implement comment regeneration analytics
-2. Add more detailed post analysis
-3. Enhance mobile responsiveness
-4. Add export functionality for analytics
-5. Implement user preferences storage
-
-## Testing Priorities
-1. Verify post text capture
-2. Test modal close actions
-3. Check analytics data accuracy
-4. Validate mobile display
-5. Test dashboard performance
-
-## Technical Details
-
-### DOM Structure
-The extension interacts with both LinkedIn and Breakcold DOM structures:
-- LinkedIn: Uses feed-shared components and Quill editor
-- Breakcold: Custom comment field integration
-- Both: Dynamic content loading with mutation observers
-
-### API Flow
-1. Extract post text using platform-specific selectors
-2. Show loading state with platform-styled spinner
-3. Send to Relevance API
-4. Parse markdown-wrapped JSON response
-5. Display formatted comments in modal with selection options
-6. Handle regeneration and insertion
-
-### Error Handling
-- Enhanced error messages with visual feedback
-- User-friendly notifications
-- Loading states for all async operations
-- Detailed logging
-- Retry mechanisms
-
-## Development Guidelines
-1. Match platform-specific design languages
-2. Maintain responsive design
-3. Handle errors gracefully with visual feedback
-4. Implement smooth transitions
-5. Clean up resources properly
 
 ## Important Files
 - manifest.json: Extension configuration

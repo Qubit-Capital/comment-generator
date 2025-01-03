@@ -139,32 +139,58 @@ function injectButtonForCommentField(commentField) {
 }
 
 // Function to handle comment generation
-async function handleCommentGeneration(event) {
-    const button = event.target.closest('.comment-generator-button');
-    if (!button) return;
+async function handleCommentGeneration(event, isRegeneration = false) {
+    let targetButton;
+    if (isRegeneration) {
+        const modal = document.querySelector('.comment-modal.breakcold');
+        targetButton = modal.dataset.originalButton ? 
+            document.querySelector(modal.dataset.originalButton) : 
+            modal.querySelector('.comment-generator-button');
+    } else {
+        targetButton = event?.target?.closest('.comment-generator-button');
+    }
+    if (!targetButton && !isRegeneration) return;
 
     try {
-        const modal = createCommentModal();
-        modal.classList.remove('hidden');
+        const modal = isRegeneration ? document.querySelector('.comment-modal.breakcold') : createCommentModal(targetButton);
+        if (!isRegeneration) {
+            modal.classList.remove('hidden');
+        }
         
         const loadingContainer = modal.querySelector('.loading-container');
         const commentsList = modal.querySelector('.comments-list');
         const errorMessage = modal.querySelector('.error-message');
         
         loadingContainer.style.display = 'flex';
-        commentsList.style.display = 'none';
+        if (!isRegeneration) {
+            commentsList.style.display = 'none';
+        }
         errorMessage.classList.add('hidden');
         
-        const postText = getPostText(button);
+        const postText = getPostText(targetButton);
+        
+        // Store current comments before regeneration
+        const previousComments = isRegeneration ? 
+            Array.from(commentsList.querySelectorAll('.comment-option'))
+                .map(option => ({
+                    text: option.querySelector('.comment-text').textContent,
+                    type: option.querySelector('.comment-tone').textContent
+                })) : 
+            [];
+        
         const comments = await window.CommentAPI.generateComments(postText, 'breakcold');
         
-        // Track comment generation
-        await window.analyticsObserver.trackCommentGeneration('breakcold', postText, comments);
+        // Track comment generation with regeneration metadata
+        await window.analyticsObserver.trackCommentGeneration('breakcold', postText, comments, {
+            isRegeneration,
+            previousComments,
+            regenerationId: isRegeneration ? crypto.randomUUID() : undefined
+        });
         
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
         
-        displayCommentOptions(comments, modal, button);
+        displayCommentOptions(comments, modal, targetButton, isRegeneration);
         
     } catch (error) {
         console.error('Error generating comments:', error);
@@ -180,19 +206,27 @@ async function handleCommentGeneration(event) {
 }
 
 // Function to create comment modal
-function createCommentModal() {
+function createCommentModal(button) {
     const modal = document.createElement('div');
     modal.className = 'comment-modal breakcold hidden';
+    
+    // Store a unique selector for the original button
+    if (button) {
+        const buttonId = `comment-btn-${crypto.randomUUID()}`;
+        button.id = buttonId;
+        modal.dataset.originalButton = `#${buttonId}`;
+    }
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Generated Comments</h2>
                 <div class="header-buttons">
-                    <button class="analytics-btn" title="View Analytics">
+                    <button class="regenerate-btn" title="Regenerate Comments">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Analytics
+                        <span>Regenerate</span>
                     </button>
                     <button class="modal-close" aria-label="Close">×</button>
                 </div>
@@ -225,12 +259,15 @@ function createCommentModal() {
         }, 300); // Match transition duration
     });
 
-    // Analytics button handler
-    modal.querySelector('.analytics-btn').addEventListener('click', () => {
-        chrome.runtime.sendMessage({ 
-            type: 'OPEN_ANALYTICS',
-            data: { platform: 'breakcold' }
-        });
+    // Regenerate button handler
+    modal.querySelector('.regenerate-btn').addEventListener('click', async () => {
+        try {
+            await handleCommentGeneration(null, true);
+        } catch (error) {
+            console.error('Error regenerating comments:', error);
+            const errorMessage = modal.querySelector('.error-message');
+            errorMessage.classList.remove('hidden');
+        }
     });
 
     // Close on background click
@@ -254,7 +291,7 @@ function createCommentModal() {
 }
 
 // Function to display comment options
-function displayCommentOptions(comments, modal, button) {
+function displayCommentOptions(comments, modal, button, isRegeneration = false) {
     const commentsList = modal.querySelector('.comments-list');
     commentsList.innerHTML = '';
     
@@ -306,7 +343,9 @@ function displayCommentOptions(comments, modal, button) {
         commentsList.appendChild(option);
     });
     
-    modal.classList.remove('hidden');
+    if (!isRegeneration) {
+        modal.classList.remove('hidden');
+    }
 }
 
 // Function to find comment field

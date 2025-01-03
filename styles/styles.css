@@ -313,7 +313,41 @@
 .header-buttons {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+}
+
+.header-buttons button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: #666;
+}
+
+.header-buttons button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.header-buttons .regenerate-btn {
+    color: #0a66c2;
+}
+
+.header-buttons .regenerate-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.header-buttons .regenerate-btn:hover svg {
+    transform: rotate(180deg);
+}
+
+.breakcold .header-buttons .regenerate-btn {
+    color: #0066FF;
 }
 
 .analytics-btn {

@@ -5,6 +5,9 @@ class AnalyticsObserver {
         this.MAX_RETRIES = 3;
         this.RETRY_DELAY = 1000; // 1 second
         this.pendingGenerations = new Map(); // Store pending generation events
+        this.pendingEvents = new Map();
+        this.DEBUG = true;
+        this.currentSessionId = crypto.randomUUID();
         this.initStorage();
         this.setupEventListeners();
     }
@@ -99,86 +102,140 @@ class AnalyticsObserver {
         }
     }
 
-    async trackCommentGeneration(platform, postText, comments, postMetadata = {}) {
+    async trackCommentGeneration(platform, postText, comments, metadata = {}) {
         try {
-            const startTime = performance.now();
-            const postId = crypto.randomUUID();
-            
-            console.log('Generating comments with data:', {
-                platform,
-                postId,
-                commentsCount: Array.isArray(comments) ? comments.length : 0,
-                postText: postText || 'No post text available'
-            });
-
-            // Map comments with proper structure
-            const formattedComments = (Array.isArray(comments) ? comments : []).map((comment, index) => {
-                const commentText = typeof comment === 'object' ? 
-                    (comment.text || JSON.stringify(comment)) : 
-                    String(comment || '');
-
-                const commentData = {
-                    id: crypto.randomUUID(),
-                    text: commentText,
-                    tone: 'professional',
-                    index,
-                    metrics: {
-                        length: commentText.length,
-                        sentiment: this.analyzeSentiment(commentText),
-                        keywords: this.extractKeywords(commentText)
-                    }
-                };
-                return commentData;
-            });
-
-            // Store in session storage
-            try {
-                sessionStorage.setItem('currentPostId', postId);
-                sessionStorage.setItem('generatedComments', JSON.stringify(formattedComments));
-                sessionStorage.setItem('currentPostText', postText || '');
-            } catch (storageError) {
-                console.error('Error storing in sessionStorage:', storageError);
-            }
+            const postId = metadata.postId || crypto.randomUUID();
+            sessionStorage.setItem('currentPostId', postId);
+            sessionStorage.setItem('currentPostText', postText);
+            sessionStorage.setItem('generatedComments', JSON.stringify(comments));
 
             const event = {
                 eventId: crypto.randomUUID(),
                 postId,
+                platform: platform.toLowerCase(),
                 type: 'generation',
-                platform,
                 data: {
                     sourcePost: {
-                        text: postText || '',
+                        text: postText,
                         metrics: {
-                            length: String(postText || '').length,
+                            length: postText.length,
                             sentiment: this.analyzeSentiment(postText),
                             keywords: this.extractKeywords(postText)
                         }
                     },
-                    generatedComments: formattedComments
-                },
-                performance: {
-                    generationTime: performance.now() - startTime,
-                    totalTime: performance.now() - startTime
+                    generatedComments: comments.map(comment => ({
+                        id: crypto.randomUUID(),
+                        text: typeof comment === 'string' ? comment : comment.text,
+                        tone: typeof comment === 'string' ? 'neutral' : comment.type,
+                        isRegenerated: metadata.isRegeneration || false,
+                        regenerationId: metadata.regenerationId,
+                        previousComments: metadata.previousComments?.map(c => ({
+                            id: crypto.randomUUID(),
+                            text: c.text,
+                            tone: c.type,
+                            metrics: {
+                                length: c.text.length,
+                                sentiment: this.analyzeSentiment(c.text),
+                                keywords: this.extractKeywords(c.text)
+                            }
+                        })) || [],
+                        metrics: {
+                            length: (typeof comment === 'string' ? comment : comment.text).length,
+                            sentiment: this.analyzeSentiment(typeof comment === 'string' ? comment : comment.text),
+                            keywords: this.extractKeywords(typeof comment === 'string' ? comment : comment.text)
+                        }
+                    })),
+                    regenerationHistory: metadata.isRegeneration ? [{
+                        regenerationId: metadata.regenerationId,
+                        timestamp: new Date().toISOString(),
+                        previousComments: metadata.previousComments?.map(c => ({
+                            id: crypto.randomUUID(),
+                            text: c.text,
+                            tone: c.type,
+                            metrics: {
+                                length: c.text.length,
+                                sentiment: this.analyzeSentiment(c.text),
+                                keywords: this.extractKeywords(c.text)
+                            }
+                        })) || [],
+                        newComments: comments.map(comment => ({
+                            id: crypto.randomUUID(),
+                            text: typeof comment === 'string' ? comment : comment.text,
+                            tone: typeof comment === 'string' ? 'neutral' : comment.type,
+                            metrics: {
+                                length: (typeof comment === 'string' ? comment : comment.text).length,
+                                sentiment: this.analyzeSentiment(typeof comment === 'string' ? comment : comment.text),
+                                keywords: this.extractKeywords(typeof comment === 'string' ? comment : comment.text)
+                            }
+                        })),
+                        selectedAfterRegeneration: false,
+                        selectedCommentIndex: null
+                    }] : []
                 },
                 metadata: {
+                    url: window.location.href,
                     browserInfo: navigator.userAgent,
-                    userAgent: navigator.userAgent,
                     timestamp: new Date().toISOString(),
-                    url: postMetadata.url || window.location.href
+                    completionType: 'no_selection',
+                    sessionId: this.currentSessionId,
+                    ...metadata
                 }
             };
 
-            // Store in pending generations
+            // Store for later use in selection tracking
             this.pendingGenerations.set(postId, {
                 event,
-                timestamp: Date.now()
+                timestamp: new Date()
             });
 
-            console.log('Generation event stored in pending:', postId);
-            return postId;
+            await this.sendToServer({ event });
+            return event;
         } catch (error) {
             console.error('Error tracking comment generation:', error);
-            return null;
+            throw error;
+        }
+    }
+
+    async trackCommentUsage(platform, index, comment, metadata = {}) {
+        const pendingEvent = Array.from(this.pendingEvents.values())
+            .find(event => event.platform === platform.toLowerCase());
+
+        if (!pendingEvent) {
+            console.error('No pending event found for comment usage');
+            return;
+        }
+
+        const event = {
+            ...pendingEvent,
+            type: 'selection',
+            data: {
+                ...pendingEvent.data,
+                selectedComment: {
+                    index,
+                    text: comment,
+                    timestamp: new Date().toISOString()
+                }
+            },
+            metadata: {
+                ...pendingEvent.metadata,
+                selectionTimestamp: new Date().toISOString()
+            }
+        };
+
+        // Update regeneration history if this selection was after regeneration
+        if (metadata.regenerationId && event.data.regenerationHistory?.length > 0) {
+            const lastRegeneration = event.data.regenerationHistory[event.data.regenerationHistory.length - 1];
+            if (lastRegeneration.regenerationId === metadata.regenerationId) {
+                lastRegeneration.selectedAfterRegeneration = true;
+                lastRegeneration.selectedCommentIndex = index;
+            }
+        }
+
+        try {
+            await this.sendToServer(event);
+            this.pendingEvents.delete(event.eventId);
+        } catch (error) {
+            console.error('Error tracking comment usage:', error);
         }
     }
 
@@ -187,7 +244,7 @@ class AnalyticsObserver {
             if (!postId) {
                 postId = sessionStorage.getItem('currentPostId');
                 if (!postId) {
-                    throw new Error('No postId found. Make sure to call trackCommentGeneration first.');
+                    throw new Error('No postId found for selection');
                 }
             }
 
@@ -207,10 +264,10 @@ class AnalyticsObserver {
                 pendingData
             });
 
-            const startTime = performance.now();
             const event = {
                 ...pendingData.event,
                 type: 'selection',
+                platform: platform.toLowerCase(),
                 data: {
                     ...pendingData.event.data,
                     sourcePost: {
@@ -221,34 +278,54 @@ class AnalyticsObserver {
                             keywords: this.extractKeywords(postText)
                         }
                     },
-                    selectedComment: {
-                        id: selectedComment.id || storedComments[selectedComment.index]?.id || crypto.randomUUID(),
-                        text: selectedComment.text,
-                        index: selectedComment.index,
-                        isRegenerated: false,
+                    generatedComments: storedComments.map(comment => ({
+                        id: crypto.randomUUID(),
+                        text: typeof comment === 'string' ? comment : comment.text,
+                        tone: typeof comment === 'string' ? 'neutral' : comment.type,
                         metrics: {
-                            length: selectedComment.text.length,
-                            sentiment: this.analyzeSentiment(selectedComment.text),
-                            keywords: this.extractKeywords(selectedComment.text)
+                            length: (typeof comment === 'string' ? comment : comment.text).length,
+                            sentiment: this.analyzeSentiment(typeof comment === 'string' ? comment : comment.text),
+                            keywords: this.extractKeywords(typeof comment === 'string' ? comment : comment.text)
                         }
-                    },
-                    generatedComments: storedComments
+                    })),
+                    selectedComment: {
+                        id: crypto.randomUUID(),
+                        text: selectedComment.text || selectedComment,
+                        index: selectedComment.index || 0,
+                        isRegenerated: selectedComment.isRegenerated || false,
+                        regenerationId: selectedComment.regenerationId,
+                        metrics: {
+                            length: (selectedComment.text || selectedComment).length,
+                            sentiment: this.analyzeSentiment(selectedComment.text || selectedComment),
+                            keywords: this.extractKeywords(selectedComment.text || selectedComment)
+                        }
+                    }
                 },
                 metadata: {
                     ...pendingData.event.metadata,
                     completionType: 'selection',
                     timestamp: new Date().toISOString()
-                },
-                performance: {
-                    ...pendingData.event.performance,
-                    selectionTime: performance.now() - startTime,
-                    totalTime: pendingData.event.performance.generationTime + (performance.now() - startTime)
                 }
             };
 
-            await this.saveAndSendEvent(event);
+            // Update regeneration history if this selection was after regeneration
+            if (event.data.regenerationHistory?.length > 0) {
+                const lastRegeneration = event.data.regenerationHistory[event.data.regenerationHistory.length - 1];
+                if (selectedComment.regenerationId === lastRegeneration.regenerationId) {
+                    lastRegeneration.selectedAfterRegeneration = true;
+                    lastRegeneration.selectedCommentIndex = selectedComment.index || 0;
+                }
+            }
+
+            await this.sendToServer({ event });
             this.pendingGenerations.delete(postId);
-            console.log('Selection event sent and cleaned up');
+
+            // Clear session storage
+            sessionStorage.removeItem('currentPostId');
+            sessionStorage.removeItem('generatedComments');
+            sessionStorage.removeItem('currentPostText');
+
+            return event;
         } catch (error) {
             console.error('Error tracking comment selection:', error);
             throw error;
@@ -403,6 +480,22 @@ class AnalyticsObserver {
         return words
             .filter(word => word.length > 3 && !stopWords.includes(word))
             .slice(0, 5);
+    }
+
+    calculatePostMetrics(postText) {
+        return {
+            length: postText.length,
+            sentiment: this.analyzeSentiment(postText),
+            keywords: this.extractKeywords(postText)
+        };
+    }
+
+    calculateCommentMetrics(commentText) {
+        return {
+            length: commentText.length,
+            sentiment: this.analyzeSentiment(commentText),
+            keywords: this.extractKeywords(commentText)
+        };
     }
 }
 

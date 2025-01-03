@@ -1,10 +1,18 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
-const http = require('http');
-const RealtimeAnalytics = require('./realtime-analytics');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import http from 'http';
+import RealtimeAnalytics from './realtime-analytics.js';
+import eventOperations from './event-operations.js';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -20,7 +28,7 @@ const realtime = new RealtimeAnalytics(server);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -28,16 +36,28 @@ app.use((req, res, next) => {
     next();
 });
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    debugLog('Connected to MongoDB Atlas');
-}).catch(err => {
-    debugLog('MongoDB connection error:', err);
-    process.exit(1); // Exit if we can't connect to MongoDB
-});
+// MongoDB Connection with retry
+const connectWithRetry = async (retries = 5, delay = 5000) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await mongoose.connect(process.env.MONGODB_URI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true
+            });
+            debugLog('Connected to MongoDB Atlas');
+            return;
+        } catch (err) {
+            if (i === retries - 1) {
+                debugLog('MongoDB connection failed after retries:', err);
+                process.exit(1);
+            }
+            debugLog(`MongoDB connection attempt ${i + 1} failed, retrying in ${delay}ms`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+};
+
+connectWithRetry();
 
 // Log when connection state changes
 mongoose.connection.on('connected', () => {
@@ -49,21 +69,8 @@ mongoose.connection.on('error', (err) => {
 });
 
 mongoose.connection.on('disconnected', () => {
-    debugLog('Mongoose disconnected');
-});
-
-// Add connection state check middleware
-app.use((req, res, next) => {
-    if (mongoose.connection.readyState !== 1) {
-        return res.status(500).json({
-            error: {
-                message: 'Database connection is not ready',
-                code: 'DB_CONNECTION_ERROR',
-                state: mongoose.connection.readyState
-            }
-        });
-    }
-    next();
+    debugLog('Mongoose disconnected, attempting to reconnect...');
+    connectWithRetry();
 });
 
 // Schema Definitions
@@ -235,157 +242,16 @@ const Post = mongoose.model('Post', PostSchema);
 const CommentEvent = mongoose.model('CommentEvent', CommentEventSchema);
 const AnalyticsSummary = mongoose.model('AnalyticsSummary', AnalyticsSummarySchema);
 
-const analyticsOperations = require('./db/analytics-operations');
-const eventOperations = require('./db/event-operations');
-
-// Error handler
-const errorHandler = (error, req, res, next) => {
-    const errorDetails = {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        stack: error.stack
-    };
-
-    // For validation errors, add detailed validation info
-    if (error.name === 'ValidationError') {
-        errorDetails.validationErrors = Object.keys(error.errors).reduce((acc, key) => {
-            acc[key] = error.errors[key].message;
-            return acc;
-        }, {});
-    }
-
-    // For MongoDB errors
-    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
-        errorDetails.mongoCode = error.code;
-        errorDetails.mongoMessage = error.errmsg;
-    }
-
-    debugLog('Error details:', errorDetails);
-
-    // Send appropriate response
-    if (error.name === 'ValidationError') {
-        res.status(400).json({
-            error: {
-                message: 'Validation failed',
-                code: 'VALIDATION_ERROR',
-                details: errorDetails.validationErrors,
-                timestamp: new Date()
-            }
-        });
-    } else {
-        res.status(500).json({
-            error: {
-                message: error.message,
-                code: error.code || 'INTERNAL_ERROR',
-                details: errorDetails,
-                timestamp: new Date()
-            }
-        });
-    }
-};
-
 // Routes
 app.post('/api/analytics/event', async (req, res) => {
     try {
-        const { event } = req.body;
-        
-        // Normalize platform to lowercase
-        if (event.platform) {
-            event.platform = event.platform.toLowerCase();
-        }
-        
-        console.log('Processing event:', {
-            eventId: event.eventId,
-            platform: event.platform,
-            type: event.type
-        });
-        
-        // Record the event in EventAnalytics
-        const result = await eventOperations.recordEvent(event);
-        if (!result) {
-            throw new Error('Failed to record event in EventAnalytics');
-        }
-        
-        console.log('Processing platform-specific analytics for:', event.platform, 'Event type:', event.type);
-        console.log('Event metadata:', JSON.stringify(event.metadata, null, 2));
-
-        // Extract common parameters
-        const baseParams = {
-            eventId: event.eventId,
-            postId: event.postId,
-            date: new Date(event.metadata.timestamp),
-            timestamp: event.metadata.timestamp,
-            rawData: {
-                post: {
-                    text: event.data.sourcePost.text,
-                    metrics: event.data.sourcePost.metrics
-                },
-                comments: event.data.generatedComments.map(comment => ({
-                    id: comment.id,
-                    text: comment.text,
-                    tone: comment.tone,
-                    metrics: comment.metrics
-                })),
-                performance: event.performance
-            },
-            metadata: {
-                userAgent: event.metadata.userAgent,
-                url: event.metadata.url,
-                completionType: event.metadata.completionType
-            }
-        };
-
-        // Add selection data if present
-        if (event.type === 'selection' && event.data.selectedComment) {
-            baseParams.rawData.selectedComment = {
-                id: event.data.selectedComment.id,
-                text: event.data.selectedComment.text,
-                index: event.data.selectedComment.index,
-                metrics: event.data.selectedComment.metrics
-            };
-        }
-
-        // Route to platform-specific collection
-        if (event.platform === 'linkedin') {
-            await analyticsOperations.recordLinkedInEvent(baseParams);
-            console.log('LinkedIn analytics recorded successfully');
-        } else if (event.platform === 'breakcold') {
-            if (!event.metadata?.campaignId) {
-                throw new Error('campaignId is required for BreakCold events');
-            }
-            
-            // Add BreakCold specific fields
-            const breakcoldParams = {
-                ...baseParams,
-                campaignId: event.metadata.campaignId
-            };
-            console.log('BreakCold params:', JSON.stringify({
-                eventId: breakcoldParams.eventId,
-                campaignId: breakcoldParams.campaignId,
-                metadata: breakcoldParams.metadata
-            }, null, 2));
-            
-            await analyticsOperations.recordBreakColdEvent(breakcoldParams);
-            console.log('BreakCold analytics recorded successfully');
-        } else {
-            throw new Error(`Unsupported platform: ${event.platform}`);
-        }
-        
-        res.json({ success: true, result });
+        debugLog('Received event:', req.body);
+        const event = await eventOperations.recordEvent(req.body);
+        debugLog('Event recorded:', event);
+        res.json({ success: true, event });
     } catch (error) {
-        console.error('Error processing analytics event:', error);
-        console.error('Error stack:', error.stack);
-        
-        // Enhanced error response
-        const errorResponse = {
-            success: false,
-            error: error.message,
-            details: error.name === 'ValidationError' ? error.errors : undefined,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        };
-        
-        res.status(500).json(errorResponse);
+        debugLog('Error recording event:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -506,9 +372,15 @@ async function generateSummary(platform, period, date) {
 }
 
 // Error handling middleware
-app.use(errorHandler);
+app.use((error, req, res, next) => {
+    debugLog('Error:', error);
+    res.status(500).json({
+        success: false,
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+});
 
-// Start server
 server.listen(port, () => {
     debugLog(`Analytics server running on port ${port}`);
 });

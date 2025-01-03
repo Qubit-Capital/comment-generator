@@ -4,6 +4,35 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-01-03
+
+### Added
+- Platform-specific analytics models for LinkedIn and BreakCold
+- Comprehensive regeneration tracking with history
+- Improved error handling and user feedback
+- Session-based analytics tracking
+
+### Changed
+- Updated comment generation flow to use CommentAPI directly
+- Improved modal UI with cleaner design
+- Enhanced comment type handling and display
+- Removed individual regenerate buttons from comments
+- Removed analytics UI button while maintaining background tracking
+- Fixed duplicate key errors in MongoDB collections
+
+### Fixed
+- Modal creation and visibility issues
+- Comment type display showing "string" instead of proper type
+- Analytics tracking for regenerated comments
+- MongoDB index conflicts
+- Proper error messages in the UI
+
+### Technical Updates
+- Converted to ESM imports/exports
+- Added proper collection names for MongoDB models
+- Improved error handling in database operations
+- Enhanced state management for regeneration tracking
+
 ## [2.0.0] - 2025-01-02
 
 ### Breaking Changes
