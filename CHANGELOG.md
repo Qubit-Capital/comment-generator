@@ -4,6 +4,23 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+## [2.1.0] - 2025-01-03
+
+### Fixed
+- Fixed comment type display issue in regenerated comments
+- Improved type handling for different comment formats
+- Enhanced comment regeneration functionality
+
+### Enhanced
+- Added better support for comment type persistence across regenerations
+- Improved error handling and user feedback
+- Enhanced notification system with smoother animations
+
+### Technical Updates
+- Added sessionStorage integration for maintaining comment types
+- Improved type extraction and classification logic
+- Enhanced button event handling and error recovery
+
 ## [2.0.0] - 2025-01-03
 
 ### Added

@@ -7,7 +7,7 @@ The Comment Generator Extension is a browser extension that helps users generate
 LinkedIn Comment Generator Chrome Extension that helps users generate contextually relevant comments on LinkedIn posts.
 
 ## Current State
-- Version: 2.0.0
+- Version: 2.1.0
 - Platform: Chrome Extension
 - Main Integration: LinkedIn, Breakcold
 - API: Relevance API (https://api-bcbe5a.stack.tryrelevance.com/latest/studios)
@@ -153,74 +153,94 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - User-friendly error messages
 - Fallback mechanisms for data recovery
 
-## Recent Changes (v2.0.0)
+## Recent Changes (v2.1.0)
 
-### Analytics System Improvements
-1. **Platform-Specific Models**
-   - Created separate models for LinkedIn and BreakCold analytics
-   - Improved data organization and querying efficiency
-   - Added proper collection names and indexes
+### Comment Type Enhancement
+- Fixed issue with comment type display in regenerated comments
+- Improved type persistence across regenerations
+- Enhanced type extraction and classification
+- Added better support for different comment formats
 
-2. **Regeneration Tracking**
-   - Added comprehensive tracking of comment regeneration history
-   - Implemented unique regeneration IDs
-   - Stored previous comments for analysis
+### UI/UX Improvements
+- Smoother animations for notifications
+- Better error handling and user feedback
+- Enhanced button functionality
+- Improved modal interactions
 
-3. **UI Enhancements**
-   - Removed individual regenerate buttons for cleaner interface
-   - Removed analytics UI button while maintaining background tracking
-   - Improved comment type display and formatting
-   - Enhanced error messages and loading states
-
-### Technical Improvements
-1. **Database Operations**
-   - Fixed duplicate key errors in MongoDB collections
-   - Improved index handling
-   - Enhanced error handling in database operations
-
-2. **Code Organization**
-   - Converted to ESM imports/exports
-   - Improved state management
-   - Enhanced error handling and logging
-
-3. **Comment Generation Flow**
-   - Updated to use CommentAPI directly
-   - Improved handling of comment types and tones
-   - Enhanced session-based tracking
+### Technical Updates
+- Integrated sessionStorage for type persistence
+- Enhanced error recovery mechanisms
+- Improved event handling
+- Better state management
 
 ## Design Decisions
 
-### Analytics Tracking
-- Decision: Keep analytics tracking in background without UI visibility
-- Rationale: Maintain data collection for improvement while simplifying user interface
-- Implementation: Removed analytics button but kept tracking functionality
+### Comment Type Handling
+- Store comment types in sessionStorage to maintain consistency
+- Extract type information from various comment formats
+- Provide fallback mechanisms for missing types
+- Use standardized type classification
 
-### Comment Types
-- Decision: Enhanced comment type handling and display
-- Rationale: Improve user understanding of comment styles
-- Implementation: Added proper type extraction and formatting
+### User Interface
+- Consistent notification system across platforms
+- Smooth animations for better user experience
+- Clear error messages and success indicators
+- Simplified modal interactions
 
-### Modal Design
-- Decision: Simplified modal interface
-- Rationale: Focus on core functionality
-- Implementation: Removed redundant buttons and streamlined UI
+### State Management
+- Use sessionStorage for temporary state
+- Maintain type information across regenerations
+- Track analytics in background
+- Handle errors gracefully
+
+## Testing Notes
+
+### Manual Testing Required
+- Comment regeneration with different types
+- Error scenarios and recovery
+- UI animations and transitions
+- Type persistence across sessions
+
+### Automated Tests
+- Type extraction functions
+- Error handling mechanisms
+- Storage integration
+- Event handling
+
+## Deployment Notes
+
+### Version 2.1.0
+- Branch: v2.1
+- Tag: v2.1.0
+- Release Date: 2025-01-03
+
+### Changes Overview
+- Fixed comment type display
+- Enhanced UI/UX
+- Improved error handling
+- Better state management
+
+### Rollback Plan
+- Revert to v2.0.0 if issues arise
+- Keep backup of analytics data
+- Monitor error rates post-deployment
 
 ## Future Considerations
 
-1. **Performance Optimization**
-   - Monitor analytics data volume
-   - Consider implementing data aggregation
-   - Optimize database queries
+### Planned Improvements
+- Enhanced type detection algorithms
+- More sophisticated error recovery
+- Advanced analytics tracking
+- Performance optimizations
 
-2. **Feature Enhancements**
-   - Consider adding more comment types
-   - Explore AI improvements for better context understanding
-   - Consider adding customization options
+### Known Issues
+- None currently identified
 
-3. **Technical Debt**
-   - Regular index optimization
-   - Monitoring of analytics storage usage
-   - Regular testing of regeneration tracking
+### Technical Debt
+- Consider refactoring type extraction logic
+- Review error handling patterns
+- Optimize storage usage
+- Standardize notification system
 
 ## Testing Notes
 

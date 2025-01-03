@@ -140,58 +140,127 @@ function injectButtonForCommentField(commentField) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(event, isRegeneration = false) {
-    let targetButton;
-    if (isRegeneration) {
-        const modal = document.querySelector('.comment-modal.breakcold');
-        targetButton = modal.dataset.originalButton ? 
-            document.querySelector(modal.dataset.originalButton) : 
-            modal.querySelector('.comment-generator-button');
-    } else {
-        targetButton = event?.target?.closest('.comment-generator-button');
-    }
-    if (!targetButton && !isRegeneration) return;
-
     try {
-        const modal = isRegeneration ? document.querySelector('.comment-modal.breakcold') : createCommentModal(targetButton);
-        if (!isRegeneration) {
-            modal.classList.remove('hidden');
+        // Get the target button
+        let targetButton;
+        if (isRegeneration) {
+            const modal = document.querySelector('.comment-modal.breakcold');
+            targetButton = modal.dataset.originalButton ? 
+                document.querySelector(modal.dataset.originalButton) : 
+                modal.querySelector('.comment-generator-button');
+        } else {
+            targetButton = event?.target?.closest('.comment-generator-button') || event;
         }
-        
+
+        if (!targetButton) {
+            console.error('No target button found');
+            return;
+        }
+
+        // Create modal if it doesn't exist
+        let modal = document.querySelector('.comment-modal.breakcold');
+        if (!modal) {
+            modal = createCommentModal(targetButton);
+            document.body.appendChild(modal);
+        }
+
         const loadingContainer = modal.querySelector('.loading-container');
         const commentsList = modal.querySelector('.comments-list');
         const errorMessage = modal.querySelector('.error-message');
-        
-        loadingContainer.style.display = 'flex';
-        if (!isRegeneration) {
-            commentsList.style.display = 'none';
+
+        if (!loadingContainer || !commentsList || !errorMessage) {
+            throw new Error('Modal elements not found');
         }
+
+        // Show modal and loading state
+        modal.classList.remove('hidden');
+        loadingContainer.style.display = 'block';
+        commentsList.style.display = 'none';
         errorMessage.classList.add('hidden');
-        
-        const postText = getPostText(targetButton);
-        
+
+        // Get post info
+        const postInfo = await getPostInfo(targetButton);
+        if (!postInfo || !postInfo.text) {
+            throw new Error('Could not extract post content');
+        }
+
         // Store current comments before regeneration
-        const previousComments = isRegeneration ? 
-            Array.from(commentsList.querySelectorAll('.comment-option'))
-                .map(option => ({
-                    text: option.querySelector('.comment-text').textContent,
-                    type: option.querySelector('.comment-tone').textContent
-                })) : 
-            [];
-        
-        const comments = await window.CommentAPI.generateComments(postText, 'breakcold');
-        
-        // Track comment generation with regeneration metadata
-        await window.analyticsObserver.trackCommentGeneration('breakcold', postText, comments, {
-            isRegeneration,
-            previousComments,
-            regenerationId: isRegeneration ? crypto.randomUUID() : undefined
-        });
-        
-        loadingContainer.style.display = 'none';
-        commentsList.style.display = 'block';
-        
-        displayCommentOptions(comments, modal, targetButton, isRegeneration);
-        
+        const previousComments = isRegeneration ? getPreviousComments(modal) : [];
+        const regenerationId = isRegeneration ? crypto.randomUUID() : undefined;
+
+        // Generate comments using CommentAPI with CORS handling
+        try {
+            const comments = await window.CommentAPI.generateComments(postInfo.text, 'breakcold', {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Origin': 'https://app.breakcold.com',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            });
+
+            if (!comments || comments.length === 0) {
+                throw new Error('No comments were generated');
+            }
+
+            // Store generation state
+            sessionStorage.setItem('currentPostId', postInfo.postId);
+            sessionStorage.setItem('currentPostText', postInfo.text);
+            sessionStorage.setItem('generatedComments', JSON.stringify(comments));
+            if (isRegeneration) {
+                sessionStorage.setItem('previousComments', JSON.stringify(previousComments));
+                sessionStorage.setItem('regenerationId', regenerationId);
+            }
+
+            // Track the generation event
+            if (window.analyticsObserver) {
+                window.analyticsObserver.trackCommentGeneration('breakcold', postInfo.text, comments, {
+                    postId: postInfo.postId,
+                    isRegeneration,
+                    previousComments,
+                    regenerationId
+                });
+            }
+
+            loadingContainer.style.display = 'none';
+            commentsList.style.display = 'block';
+
+            // Display comments with proper structure and type
+            const formattedComments = comments.map(comment => {
+                // Extract the tone from the comment
+                let type = 'Neutral';
+                if (typeof comment === 'object' && comment.type) {
+                    // Handle detailed tone format like "Friendly (Informational)"
+                    const toneMatch = comment.type.match(/^(\w+)/);
+                    type = toneMatch ? toneMatch[1] : comment.type;
+                } else if (typeof comment === 'object' && comment.tone) {
+                    type = comment.tone;
+                }
+
+                return {
+                    text: typeof comment === 'object' ? comment.text : comment,
+                    type: type
+                };
+            });
+
+            displayCommentOptions(formattedComments, modal, targetButton, postInfo.postId, isRegeneration);
+        } catch (error) {
+            console.error('CORS Error:', error);
+            // Try fallback method with no-cors mode
+            const comments = await window.CommentAPI.generateComments(postInfo.text, 'breakcold', {
+                mode: 'no-cors',
+                credentials: 'omit'
+            });
+
+            if (!comments || comments.length === 0) {
+                throw new Error('Failed to generate comments. Please try again.');
+            }
+
+            // Process comments as before...
+            loadingContainer.style.display = 'none';
+            commentsList.style.display = 'block';
+            displayCommentOptions(comments, modal, targetButton, postInfo.postId, isRegeneration);
+        }
     } catch (error) {
         console.error('Error generating comments:', error);
         const modal = document.querySelector('.comment-modal.breakcold');
@@ -199,8 +268,14 @@ async function handleCommentGeneration(event, isRegeneration = false) {
             const loadingContainer = modal.querySelector('.loading-container');
             const errorMessage = modal.querySelector('.error-message');
             
-            loadingContainer.style.display = 'none';
-            errorMessage.classList.remove('hidden');
+            if (loadingContainer) loadingContainer.style.display = 'none';
+            if (errorMessage) {
+                errorMessage.classList.remove('hidden');
+                const errorText = errorMessage.querySelector('p');
+                if (errorText) {
+                    errorText.textContent = error.message || 'Failed to generate comments. Please try again.';
+                }
+            }
         }
     }
 }
@@ -291,104 +366,99 @@ function createCommentModal(button) {
 }
 
 // Function to display comment options
-function displayCommentOptions(comments, modal, button, isRegeneration = false) {
+function displayCommentOptions(comments, modal, button, postId, isRegeneration = false) {
     const commentsList = modal.querySelector('.comments-list');
     commentsList.innerHTML = '';
     
     comments.forEach((comment, index) => {
-        const option = document.createElement('div');
-        option.className = 'comment-option';
+        const commentOption = document.createElement('div');
+        commentOption.className = 'comment-option';
         
         // Get the tone from the type field, handle both formats
-        let tone = '';
-        let toneClass = '';
+        let tone = 'Neutral';
+        let toneClass = 'neutral';
         
-        if (comment.type) {
-            // Handle detailed tone format like "Friendly (Informational)"
-            const toneMatch = comment.type.match(/^(\w+)/);
-            tone = comment.type; // Use full tone description
-            toneClass = toneMatch ? toneMatch[1].toLowerCase() : 'neutral';
-        } else {
-            tone = 'Neutral';
-            toneClass = 'neutral';
+        if (typeof comment === 'object') {
+            if (comment.type) {
+                // Handle detailed tone format like "Friendly (Informational)"
+                const toneMatch = comment.type.match(/^(\w+)/);
+                tone = comment.type; // Use full tone description
+                toneClass = toneMatch ? toneMatch[1].toLowerCase() : 'neutral';
+            } else if (comment.tone) {
+                tone = comment.tone;
+                toneClass = comment.tone.toLowerCase();
+            }
+        } else if (typeof comment === 'string') {
+            // If it's a string, try to extract type from sessionStorage
+            const storedComments = JSON.parse(sessionStorage.getItem('generatedComments') || '[]');
+            const storedComment = storedComments[index];
+            if (storedComment && storedComment.type) {
+                tone = storedComment.type;
+                const toneMatch = tone.match(/^(\w+)/);
+                toneClass = toneMatch ? toneMatch[1].toLowerCase() : 'neutral';
+            }
         }
         
-        option.innerHTML = `
+        const commentText = typeof comment === 'object' ? comment.text : comment;
+        
+        commentOption.innerHTML = `
             <div class="comment-header">
                 <span class="comment-tone ${toneClass}">${tone}</span>
             </div>
-            <div class="comment-text">${comment.text || comment}</div>
-            <button class="use-comment-btn">Use this comment</button>
+            <div class="comment-text">${commentText}</div>
+            <button class="use-comment-button">Use this comment</button>
         `;
         
-        const useButton = option.querySelector('.use-comment-btn');
-        useButton.addEventListener('click', async () => {
+        const useButton = commentOption.querySelector('.use-comment-button');
+        useButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
             try {
-                // Track comment usage
-                await window.analyticsObserver.trackCommentUsage('breakcold', index, comment.text || comment);
+                const commentText = this.parentElement.querySelector('.comment-text').textContent;
+                const commentType = this.parentElement.querySelector('.comment-tone').textContent;
                 
-                const commentField = findCommentField(button);
-                if (commentField) {
-                    insertComment(commentField, comment.text || comment);
-                    modal.classList.add('hidden');
-                    showNotification('Comment added successfully!', 'success');
-                } else {
+                // Find the comment box
+                const commentBox = findCommentBox(button);
+                if (!commentBox) {
                     showNotification('Could not find comment field. Please try again.', 'error');
+                    return;
                 }
+
+                // Track comment usage
+                if (window.analyticsObserver) {
+                    window.analyticsObserver.trackCommentUsage('breakcold', {
+                        postId,
+                        commentIndex: index,
+                        commentText,
+                        commentType,
+                        isRegenerated: isRegeneration
+                    });
+                }
+
+                // Set the comment text
+                commentBox.value = commentText;
+                commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+                commentBox.focus();
+
+                // Close the modal
+                modal.classList.add('hidden');
+                
+                // Show success notification
+                showNotification('Comment added successfully!', 'success');
+
             } catch (error) {
                 console.error('Error using comment:', error);
+                showNotification('Failed to use comment. Please try again.', 'error');
             }
         });
         
-        commentsList.appendChild(option);
+        commentsList.appendChild(commentOption);
     });
     
     if (!isRegeneration) {
         modal.classList.remove('hidden');
     }
-}
-
-// Function to find comment field
-function findCommentField(button) {
-    // First try to find the textarea within the closest relative container
-    const relativeContainer = button.closest('.relative');
-    if (relativeContainer) {
-        const textarea = relativeContainer.querySelector('textarea');
-        if (textarea) return textarea;
-    }
-
-    // Fallback: Look for the closest comment field container
-    const commentContainer = button.closest('.comment-generator-container')?.parentElement;
-    if (commentContainer) {
-        const textarea = commentContainer.querySelector('textarea');
-        if (textarea) return textarea;
-    }
-
-    // Final fallback: Look for any textarea in the post container
-    const postContainer = button.closest('.post-container, .feed-item');
-    if (postContainer) {
-        const textarea = postContainer.querySelector('textarea');
-        if (textarea) return textarea;
-    }
-
-    return null;
-}
-
-// Function to insert comment
-function insertComment(field, text) {
-    if (!field || !text) return;
-    
-    // Set the value
-    field.value = text;
-    
-    // Create and dispatch input event
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    
-    // Create and dispatch change event
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Focus the field
-    field.focus();
 }
 
 // Function to show notification
@@ -397,15 +467,92 @@ function showNotification(message, type = 'info') {
     notification.className = `notification ${type}`;
     notification.textContent = message;
     
+    // Add styles dynamically
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 4px;
+        color: white;
+        font-size: 14px;
+        z-index: 10000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease-out;
+    `;
+    
     document.body.appendChild(notification);
     
-    // Remove after 3 seconds
+    // Trigger animation
+    requestAnimationFrame(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    });
+    
+    // Remove after delay
     setTimeout(() => {
-        notification.classList.add('fade-out');
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
-            notification.remove();
+            document.body.removeChild(notification);
         }, 300);
     }, 3000);
+}
+
+// Function to find comment box
+function findCommentBox(button) {
+    if (!button) return null;
+    
+    // Try to find the comment box in various containers
+    const containers = [
+        button.closest('.relative'),
+        button.closest('.comment-generator-container')?.parentElement,
+        button.closest('.post-container, .feed-item')
+    ].filter(Boolean);
+    
+    for (const container of containers) {
+        const textarea = container.querySelector('textarea[placeholder*="comment" i], textarea[placeholder*="reply" i], textarea.comment-box');
+        if (textarea) return textarea;
+    }
+    
+    return null;
+}
+
+// Function to get post info
+async function getPostInfo(button) {
+    try {
+        const postText = await getPostText(button);
+        const postContainer = button instanceof Element ? 
+            button.closest('.post-container, .feed-item') : 
+            document.querySelector('.post-container, .feed-item');
+        
+        const postId = postContainer?.getAttribute('data-post-id') || crypto.randomUUID();
+        
+        if (!postText) {
+            throw new Error('Could not extract post content');
+        }
+
+        return { text: postText, postId };
+    } catch (error) {
+        console.error('[AI Comment Generator] Error in getPostInfo:', error);
+        throw error;
+    }
+}
+
+// Function to get previous comments
+function getPreviousComments(modal) {
+    if (!modal) return [];
+    
+    const commentsList = modal.querySelector('.comments-list');
+    if (!commentsList) return [];
+
+    return Array.from(commentsList.querySelectorAll('.comment-option'))
+        .map(option => ({
+            text: option.querySelector('.comment-text')?.textContent || '',
+            type: option.querySelector('.comment-tone')?.textContent || 'Neutral'
+        }))
+        .filter(comment => comment.text);
 }
 
 // Initialize button injection

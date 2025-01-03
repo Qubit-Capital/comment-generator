@@ -1,62 +1,61 @@
-# Comment Generator Extension
+# AI Comment Generator
 
-A browser extension that generates contextual comments for LinkedIn and BreakCold platforms with analytics tracking.
+## Version 2.1.0
+
+A powerful browser extension that helps users generate contextually relevant comments for LinkedIn posts and BreakCold platform.
 
 ## Features
 
-- Contextual comment generation based on post content
-- Platform-specific comment styles and tones
-- Analytics tracking for comment generation and usage
-- Comment regeneration with history tracking
-- Clean and intuitive user interface
+### Core Features
+- AI-powered comment generation based on post content
+- Multiple comment styles/tones (Friendly, Professional, Humorous, etc.)
+- Comment regeneration with type persistence
+- Seamless integration with LinkedIn and BreakCold platforms
+
+### Enhanced Functionality
+- Smart comment type detection and preservation
+- Smooth animations and transitions
+- Improved error handling and user feedback
+- Background analytics tracking
 
 ## Technical Architecture
 
 ### Frontend
-- Chrome Extension content scripts for LinkedIn and BreakCold
-- Modal-based UI for comment generation and selection
-- Real-time analytics tracking
+- Vanilla JavaScript for core functionality
+- Custom CSS for styling and animations
+- Event-driven architecture for UI interactions
 
-### Backend
+### Backend Integration
+- RESTful API integration for comment generation
 - MongoDB for analytics storage
-- Platform-specific analytics models
-- Event-based architecture for tracking
-- WebSocket support for real-time updates
+- Session storage for state management
+
+### Analytics
+- Background tracking of comment generation and usage
+- Performance monitoring
+- User interaction analysis
 
 ## Installation
 
 1. Clone the repository
-2. Install dependencies:
-```bash
-npm install
-```
-3. Set up MongoDB and configure connection string in `.env`
-4. Start the analytics server:
-```bash
-npm run start-analytics
-```
-5. Load the extension in Chrome:
-   - Open `chrome://extensions/`
+2. Install dependencies: `npm install`
+3. Build the extension: `npm run build`
+4. Load the extension in Chrome:
+   - Open chrome://extensions/
    - Enable Developer mode
    - Click "Load unpacked"
-   - Select the extension directory
+   - Select the `dist` folder
 
 ## Development
 
-### Project Structure
-```
-├── content/
-│   ├── linkedin/         # LinkedIn-specific content scripts
-│   └── breakcold/        # BreakCold-specific content scripts
-├── db/
-│   ├── schemas/          # MongoDB schemas
-│   └── operations/       # Database operations
-├── models/              # Data models
-├── shared/             # Shared utilities
-└── analytics/          # Analytics tracking
+### Setup
+```bash
+git clone <repository-url>
+cd comment-generator
+npm install
 ```
 
-### Testing
+### Running Tests
 ```bash
 npm test
 ```
@@ -66,22 +65,17 @@ npm test
 npm run build
 ```
 
-## Analytics Features
-
-- Comment generation tracking
-- Comment selection analytics
-- Regeneration history
-- Platform-specific metrics
-- Real-time data updates
+### Branch Strategy
+- `main`: Production-ready code
+- `v2.x`: Feature development branches
+- `hotfix/*`: Bug fix branches
 
 ## Contributing
-
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ## License
-
-MIT License - see LICENSE file for details
+This project is licensed under the MIT License - see the LICENSE file for details.
