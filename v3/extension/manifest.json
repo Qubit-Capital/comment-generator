@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "AI Comment Generator",
+  "version": "1.0.0",
+  "description": "Generate contextually relevant comments for LinkedIn and Breakcold posts",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://*.breakcold.com/*",
+    "https://*.app.breakcold.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*"],
+      "js": [
+        "src/shared/api.js",
+        "src/shared/utils.js",
+        "src/content/linkedin/linkedin-content.js"
+      ],
+      "css": ["styles/styles.css"]
+    },
+    {
+      "matches": ["*://*.breakcold.com/*", "*://*.app.breakcold.com/*"],
+      "js": [
+        "src/shared/api.js",
+        "src/shared/utils.js",
+        "src/content/breakcold/breakcold-content.js"
+      ],
+      "css": ["styles/styles.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "48": "public/images/icon48.png",
+      "128": "public/images/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "public/images/icon16.png",
+    "48": "public/images/icon48.png",
+    "128": "public/images/icon128.png"
+  }
+}

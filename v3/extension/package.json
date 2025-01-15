@@ -1,0 +1,23 @@
+{
+  "name": "comment-generator-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for AI-powered comment generation",
+  "type": "module",
+  "scripts": {
+    "build": "echo \"No build step required\" && exit 0",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "comments",
+    "linkedin",
+    "breakcold"
+  ],
+  "author": "Qubit Capital",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1"
+  }
+}
