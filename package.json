@@ -2,8 +2,8 @@
   "name": "comment-generator",
   "version": "2.0.0",
   "description": "AI-powered comment generator for LinkedIn and Breakcold",
-  "type": "module",
   "main": "background.js",
+  "type": "commonjs",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
@@ -16,26 +16,23 @@
     "url": "https://github.com/Qubit-Capital/comment-generator.git"
   },
   "keywords": [
-    "ai",
-    "comments",
+    "chrome-extension",
+    "comment-generator",
     "linkedin",
-    "breakcold",
-    "automation"
+    "breakcold"
   ],
   "author": "Qubit Capital",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.3.1",
-    "node-fetch": "^3.3.2",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22",
     "@babel/core": "^7.22.0",
     "@babel/preset-env": "^7.22.0",
     "babel-jest": "^29.5.0",
     "jest": "^29.5.0",
-    "jest-environment-jsdom": "^29.5.0"
+    "jest-environment-jsdom": "^29.5.0",
+    "nodemon": "^2.0.22"
   },
   "jest": {
     "testEnvironment": "jsdom",
@@ -47,6 +44,9 @@
       "content/**/*.js",
       "shared/**/*.js",
       "!**/node_modules/**"
-    ]
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    }
   }
 }
