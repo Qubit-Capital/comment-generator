@@ -8,25 +8,53 @@ class CommentAPI {
         };
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second delay between retries
-        this.DEBUG = true;
+        this.DEBUG = process.env.NODE_ENV !== 'production';
     }
 
     log(...args) {
-        if (this.DEBUG) console.log('[AI Comment API]', ...args);
+        if (this.DEBUG) {
+            console.log('[AI Comment API]', ...args);
+        }
+    }
+
+    getUserFriendlyError(error) {
+        const messages = {
+            'network': 'Connection failed. Please check your internet.',
+            'timeout': 'Request timed out. Please try again.',
+            'server': 'Server error. Please try again later.',
+            'invalid_input': 'Invalid text input. Please try again with different text.',
+            'rate_limit': 'Too many requests. Please wait a moment and try again.',
+            'default': 'An error occurred. Please try again.'
+        };
+        return messages[error.type] || messages.default;
+    }
+
+    handleApiError(error, context) {
+        console.error(`[AI Comment API] ${context}:`, error);
+        return {
+            success: false,
+            error: this.getUserFriendlyError(error)
+        };
     }
 
     preprocessText(text) {
-        if (!text || typeof text !== 'string') {
-            this.log('Invalid text input:', text);
-            throw new Error('Invalid text input');
-        }
+        try {
+            if (!text || typeof text !== 'string') {
+                throw { type: 'invalid_input', message: 'Invalid text input' };
+            }
 
-        const processed = text.trim()
-            .replace(/\s+/g, ' ')
-            .substring(0, 500);
-        
-        this.log('Preprocessed text length:', processed.length);
-        return processed;
+            const processed = text.trim()
+                .replace(/\s+/g, ' ')
+                .substring(0, 500);
+            
+            if (processed.length === 0) {
+                throw { type: 'invalid_input', message: 'Empty text after processing' };
+            }
+
+            return processed;
+        } catch (error) {
+            throw { type: 'invalid_input', message: error.message || 'Text processing failed' };
+        }
     }
 
     async delay(ms) {
@@ -35,16 +63,24 @@ class CommentAPI {
 
     async generateComments(text, platform) {
         if (!text || !platform) {
-            throw new Error('Missing required parameters: text and platform');
+            return this.handleApiError({ type: 'invalid_input' }, 'Missing parameters');
         }
 
-        this.log('Generating comments for platform:', platform);
-        const cleanText = this.preprocessText(text);
+        let cleanText;
+        try {
+            cleanText = this.preprocessText(text);
+        } catch (error) {
+            return this.handleApiError(error, 'Text preprocessing');
+        }
+
         let lastError = null;
         
         for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
             try {
-                this.log(`Attempt ${attempt} of ${this.maxRetries}`);
+                if (attempt > 1) {
+                    await this.delay(this.retryDelay);
+                }
+
                 const apiUrl = `${this.API_CONFIG.baseUrl}/${this.API_CONFIG.studioId}/trigger_limited`;
                 
                 const response = await fetch(apiUrl, {
@@ -53,62 +89,43 @@ class CommentAPI {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        project_id: this.API_CONFIG.projectId,
                         params: {
-                            linked_in_post: cleanText
-                        },
-                        project: this.API_CONFIG.projectId
+                            text: cleanText,
+                            platform: platform
+                        }
                     })
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`API request failed: ${response.status} - ${errorData.message || response.statusText}`);
+                    const errorType = response.status === 429 ? 'rate_limit' : 
+                                    response.status >= 500 ? 'server' : 'default';
+                    throw { type: errorType, status: response.status };
                 }
 
                 const data = await response.json();
                 
-                if (!data.output || !data.output.answer) {
-                    throw new Error('Invalid response format from API');
+                if (!data || !data.output || !Array.isArray(data.output)) {
+                    throw { type: 'server', message: 'Invalid response format' };
                 }
 
-                // Parse the answer which is a JSON string wrapped in markdown code block
-                const cleanAnswer = data.output.answer.replace(/```json\n?|\n?```/g, '').trim();
-                const parsedData = JSON.parse(cleanAnswer);
-
-                if (!parsedData || !Array.isArray(parsedData.comments)) {
-                    throw new Error('Invalid comments data format');
-                }
-
-                this.log('Successfully generated comments');
-                return parsedData.comments;
+                return {
+                    success: true,
+                    comments: data.output
+                };
 
             } catch (error) {
-                lastError = error;
-                this.log(`Attempt ${attempt} failed:`, error);
-                
-                if (attempt < this.maxRetries) {
-                    const delay = this.retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
-                    this.log(`Retrying in ${delay}ms...`);
-                    await this.delay(delay);
+                lastError = error.type === 'rate_limit' ? error : 
+                           error.name === 'TypeError' ? { type: 'network', message: error.message } :
+                           error;
+
+                if (attempt === this.maxRetries || error.type === 'rate_limit') {
+                    return this.handleApiError(lastError, 'API request failed');
                 }
             }
         }
 
-        throw lastError || new Error('Failed to generate comments after multiple attempts');
-    }
-
-    async checkAuth() {
-        try {
-            const response = await fetch(`${this.API_CONFIG.baseUrl}/health`, {
-                headers: {
-                    'Authorization': `Bearer ${this.API_CONFIG.apiKey}`
-                }
-            });
-            return response.ok;
-        } catch (error) {
-            this.log('Auth check failed:', error);
-            return false;
-        }
+        return this.handleApiError(lastError || { type: 'default' }, 'All attempts failed');
     }
 }
 
