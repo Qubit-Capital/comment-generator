@@ -1,11 +1,17 @@
-const TestUtils = require('./test-utils');
+import TestUtils from './test-utils';
 
 describe('Breakcold Comment Generator Tests', () => {
     let container;
     let commentField;
     let post;
 
+    beforeAll(() => {
+        // Set up test environment
+        document.body.innerHTML = '';
+    });
+
     beforeEach(() => {
+        // Create test container
         container = document.createElement('div');
         document.body.appendChild(container);
         
@@ -18,23 +24,27 @@ describe('Breakcold Comment Generator Tests', () => {
     });
 
     afterEach(() => {
-        container.remove();
+        // Clean up after each test
+        if (container && container.parentNode) {
+            container.remove();
+        }
         TestUtils.cleanup();
+        jest.clearAllMocks();
     });
 
     describe('Button Injection', () => {
-        test('should inject comment button correctly', () => {
+        it('should inject comment button correctly', () => {
             expect(TestUtils.verifyCommentButton(container)).toBe(true);
         });
 
-        test('should inject button only once', () => {
+        it('should inject button only once', () => {
             const buttons = container.querySelectorAll('.comment-generator-button');
             expect(buttons.length).toBe(1);
         });
     });
 
     describe('Comment Generation', () => {
-        test('should show loading state during generation', async () => {
+        it('should show loading state during generation', async () => {
             const button = container.querySelector('.comment-generator-button');
             button.click();
             
@@ -45,7 +55,7 @@ describe('Breakcold Comment Generator Tests', () => {
             expect(loading.classList.contains('hidden')).toBe(true);
         });
 
-        test('should handle generation errors gracefully', async () => {
+        it('should handle generation errors gracefully', async () => {
             // Mock API error
             const errorResponse = TestUtils.createMockResponse(false, { error: 'API Error' });
             
@@ -62,7 +72,7 @@ describe('Breakcold Comment Generator Tests', () => {
     });
 
     describe('Comment Selection & Insertion', () => {
-        test('should insert selected comment correctly', async () => {
+        it('should insert selected comment correctly', async () => {
             const testComment = 'Test comment for Breakcold';
             const commentElement = document.createElement('div');
             commentElement.className = 'comment-option';
@@ -74,7 +84,7 @@ describe('Breakcold Comment Generator Tests', () => {
             expect(TestUtils.verifyCommentInsertion(commentField, testComment)).toBe(true);
         });
 
-        test('should maintain cursor position after insertion', () => {
+        it('should maintain cursor position after insertion', () => {
             const selection = window.getSelection();
             const range = document.createRange();
             range.selectNodeContents(commentField);
@@ -89,11 +99,12 @@ describe('Breakcold Comment Generator Tests', () => {
     });
 
     describe('Platform Integration', () => {
-        test('should detect Breakcold environment correctly', () => {
+        it('should detect Breakcold environment correctly', () => {
+            window.location.href = 'https://breakcold.com';
             expect(window.location.href.includes('breakcold.com')).toBe(true);
         });
 
-        test('should handle platform-specific DOM elements', () => {
+        it('should handle platform-specific DOM elements', () => {
             expect(post.classList.contains('breakcold-post')).toBe(true);
             expect(commentField.classList.contains('breakcold-comment-field')).toBe(true);
         });

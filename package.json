@@ -3,13 +3,13 @@
   "version": "2.0.0",
   "description": "AI-powered comment generator for LinkedIn and Breakcold",
   "main": "background.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:linkedin": "jest linkedin.test.js",
-    "test:breakcold": "jest breakcold.test.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:linkedin": "node --experimental-vm-modules node_modules/jest/bin/jest.js linkedin.test.js",
+    "test:breakcold": "node --experimental-vm-modules node_modules/jest/bin/jest.js breakcold.test.js"
   },
   "repository": {
     "type": "git",
@@ -47,6 +47,8 @@
     ],
     "transform": {
       "^.+\\.js$": "babel-jest"
-    }
+    },
+    "extensionsToTreatAsEsm": [".js"],
+    "moduleFileExtensions": ["js", "json", "node"]
   }
 }
