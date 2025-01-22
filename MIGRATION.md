@@ -131,6 +131,92 @@ If issues are encountered:
 - [ ] Phase 5: Testing
 - [ ] Phase 6: Cleanup and Documentation
 
+## Detailed Phase 4 Plan
+
+### 1. Analysis Phase
+#### 1.1 Dependency Mapping
+- [ ] Identify files interacting with content scripts
+- [ ] Document analytics data flow
+- [ ] Map event listeners and handlers
+- [ ] Create dependency graph
+
+#### 1.2 Code Review Checklist
+- [ ] Direct analytics calls
+- [ ] Event dispatching mechanisms
+- [ ] Session storage usage
+- [ ] Analytics-dependent error handling
+
+### 2. Implementation Phases
+
+#### Phase 4.1: Shared Utils Cleanup
+- [ ] Review utils.js
+  - Remove analytics utility functions
+  - Update error handling utilities
+  - Clean up unused helpers
+- [ ] Review api.js
+  - Remove analytics endpoints
+  - Update API response handling
+  - Clean up error handling
+
+#### Phase 4.2: Content Script Base Cleanup
+- [ ] Remove analytics event dispatching
+- [ ] Clean up session storage usage
+- [ ] Update error handling
+- [ ] Document changes
+
+#### Phase 4.3: UI Component Updates
+- [ ] Clean up modal analytics
+- [ ] Update button handlers
+- [ ] Remove analytics listeners
+- [ ] Test UI functionality
+
+#### Phase 4.4: Event Handler Cleanup
+- [ ] Remove analytics events
+- [ ] Clean up event listeners
+- [ ] Update user feedback
+- [ ] Verify event flow
+
+#### Phase 4.5: Testing & Verification
+- [ ] Unit Testing
+  - Comment generation
+  - UI interactions
+  - Error scenarios
+- [ ] Integration Testing
+  - Platform integrations
+  - API interactions
+  - User flows
+- [ ] Regression Testing
+  - Core features
+  - Error handling
+  - Edge cases
+
+### 3. Success Criteria
+- [ ] Comment generation works successfully
+- [ ] Errors are handled gracefully
+- [ ] User feedback is maintained
+- [ ] UI remains responsive
+- [ ] Cross-platform functionality intact
+
+### 4. Risk Mitigation
+#### Potential Risks:
+- Breaking error handling
+- Lost user feedback
+- UI state issues
+- Platform-specific bugs
+
+#### Mitigation Strategies:
+1. Make incremental changes
+2. Maintain comprehensive testing
+3. Create clear rollback points
+4. Keep documentation updated
+
+### 5. Rollback Strategy
+Create git tags at key points:
+- [ ] Before shared utils modification
+- [ ] After shared utils cleanup
+- [ ] Before content script changes
+- [ ] After each content script update
+
 ## Notes
 - Keep track of any unexpected dependencies
 - Document any workarounds needed
