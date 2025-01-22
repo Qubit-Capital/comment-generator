@@ -232,15 +232,6 @@ function createCommentModal(button) {
 
     // Close button handler
     modal.querySelector('.modal-close').addEventListener('click', () => {
-        // Dispatch close event before hiding modal
-        const closeEvent = new CustomEvent('popupClose', {
-            detail: {
-                postId: sessionStorage.getItem('currentPostId'),
-                closeType: 'close_button'
-            }
-        });
-        document.dispatchEvent(closeEvent);
-
         modal.classList.add('hidden');
         setTimeout(() => {
             modal.remove();
@@ -255,21 +246,13 @@ function createCommentModal(button) {
             console.error('Error regenerating comments:', error);
             const errorMessage = modal.querySelector('.error-message');
             errorMessage.classList.remove('hidden');
+            errorMessage.textContent = error.message || 'Failed to regenerate comments. Please try again.';
         }
     });
 
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            // Dispatch outside click event before closing
-            const clickEvent = new CustomEvent('popupOutsideClick', {
-                detail: {
-                    postId: sessionStorage.getItem('currentPostId'),
-                    closeType: 'outside_click'
-                }
-            });
-            document.dispatchEvent(clickEvent);
-
             modal.querySelector('.modal-close').click();
         }
     });
