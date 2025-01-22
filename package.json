@@ -4,12 +4,7 @@
   "description": "AI-powered comment generator for LinkedIn",
   "type": "module",
   "main": "background.js",
-  "scripts": {
-    "test": "node test/analytics-test.js",
-    "start": "node analytics-server.js",
-    "dev": "nodemon analytics-server.js",
-    "test:analytics": "node test-realtime-analytics.js"
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/Qubit-Capital/comment-generator.git"
@@ -24,14 +19,9 @@
   "author": "Qubit Capital",
   "license": "MIT",
   "dependencies": {
-    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "mongodb": "^6.3.0",
-    "mongoose": "^8.0.3",
     "node-fetch": "^3.3.2",
-    "uuid": "^9.0.1",
-    "ws": "^8.15.1"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
