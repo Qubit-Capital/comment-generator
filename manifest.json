@@ -5,7 +5,8 @@
   "description": "Generate contextually relevant comments for LinkedIn and Breakcold posts",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "cookies"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
@@ -19,7 +20,6 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
-        "shared/stubs.js",
         "content/linkedin/linkedin-content.js"
       ],
       "css": ["styles/styles.css"],
@@ -33,7 +33,6 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
-        "shared/stubs.js",
         "content/breakcold/breakcold-content.js"
       ],
       "css": ["styles/styles.css"],
@@ -45,26 +44,28 @@
       "resources": [
         "shared/*",
         "content/*",
-        "styles/*"
+        "styles/*",
+        "popup/*"
       ],
       "matches": [
-        "*://*.linkedin.com/*",
-        "*://*.breakcold.com/*",
-        "*://*.app.breakcold.com/*"
+        "https://*.linkedin.com/*",
+        "https://*.breakcold.com/*",
+        "https://*.app.breakcold.com/*"
       ]
     }
   ],
-  "icons": {
-    "16": "images/icon16.png",
-    "48": "images/icon48.png",
-    "128": "images/icon128.png"
-  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "48": "images/icon48.png",
-      "128": "images/icon128.png"
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "background": {
     "service_worker": "background.js"
