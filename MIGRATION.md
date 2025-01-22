@@ -226,14 +226,137 @@ If issues are encountered:
 ### 2. Implementation Phases
 
 #### Phase 4.1: Shared Utils Cleanup
-- [ ] Review utils.js
-  - Remove analytics utility functions
-  - Update error handling utilities
-  - Clean up unused helpers
-- [ ] Review api.js
-  - Remove analytics endpoints
-  - Update API response handling
-  - Clean up error handling
+
+##### utils.js Modification Plan
+
+1. **Pre-modification Setup**
+   ```
+   - Create backup of current utils.js
+   - Tag current state in git
+   - Create test branch for modifications
+   ```
+
+2. **Code Sections to Modify**
+
+   a. Event Dispatching:
+   ```javascript
+   Current:
+   useButton.addEventListener('click', () => {
+       this.log('Comment selected:', comment.substring(0, 50) + '...');
+       const event = new CustomEvent('comment-selected', {
+           detail: { comment }
+       });
+       document.dispatchEvent(event);
+   });
+
+   Change to:
+   useButton.addEventListener('click', () => {
+       this.insertComment(comment);
+   });
+   ```
+
+   b. Logging System:
+   ```javascript
+   Current:
+   log(...args) {
+       if (this.DEBUG) console.log('[AI Comment Utils]', ...args);
+   }
+
+   Change to:
+   log(...args) {
+       if (this.DEBUG && process.env.NODE_ENV !== 'production') {
+           console.log('[AI Comment Utils]', ...args);
+       }
+   }
+   ```
+
+   c. Error Handling:
+   ```javascript
+   Current:
+   - Scattered error logging
+   - Analytics-dependent error tracking
+
+   Change to:
+   - Centralized error handling
+   - User-focused error messages
+   - Remove analytics tracking
+   ```
+
+3. **New Functions to Add**
+   ```javascript
+   // Direct comment insertion
+   insertComment(comment) {
+       const textArea = this.findActiveTextArea();
+       if (textArea) {
+           textArea.value = comment;
+           this.log('Comment inserted');
+       }
+   }
+
+   // Error handling
+   handleError(error, context) {
+       console.error(`[AI Comment Utils] ${context}:`, error);
+       // Show user-friendly error message if needed
+   }
+   ```
+
+4. **Functions to Remove**
+   ```javascript
+   - analyticsTrackingHelpers (if exists)
+   - eventTracking related functions
+   - debugLogging extensive functions
+   ```
+
+5. **Testing Steps**
+   ```
+   1. UI Component Tests:
+      □ Button creation
+      □ Container creation
+      □ Modal functionality
+      □ Comment insertion
+
+   2. Error Handling Tests:
+      □ Invalid input handling
+      □ Missing element handling
+      □ DOM manipulation errors
+
+   3. Integration Tests:
+      □ Comment selection flow
+      □ UI updates
+      □ Error message display
+   ```
+
+6. **Verification Checklist**
+   ```
+   □ All UI components render correctly
+   □ Comment selection works without analytics
+   □ Error messages are user-friendly
+   □ No console errors
+   □ No references to analytics
+   □ Performance is maintained
+   ```
+
+7. **Rollback Procedure**
+   ```
+   1. If any test fails:
+      - Revert to tagged version
+      - Document specific failure
+      - Create new branch for alternative approach
+
+   2. If production issues:
+      - Immediate revert to backup
+      - Log issues encountered
+      - Plan alternative implementation
+   ```
+
+8. **Success Criteria**
+   ```
+   □ All tests pass
+   □ No analytics code remains
+   □ Core functionality preserved
+   □ Error handling improved
+   □ Performance maintained or improved
+   ```
 
 #### Phase 4.2: Content Script Base Cleanup
 - [ ] Remove analytics event dispatching
