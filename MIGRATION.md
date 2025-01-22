@@ -116,6 +116,20 @@ Key Changes Made:
 4. Improved error message display
 5. Maintained core UI functionality
 
+### Phase 4.4: Event Handler Cleanup (✓ Completed)
+- [x] Remove analytics event handlers from popup
+- [x] Remove analytics event listeners
+- [x] Remove analytics UI components
+- [x] Update platform status handling
+- [x] Test popup functionality
+
+Key Changes Made:
+1. Removed analytics event handlers from popup.js
+2. Removed analytics UI components from popup.html
+3. Simplified platform status checking
+4. Improved error handling in popup
+5. Maintained core popup functionality
+
 ### Phase 5: Testing Checkpoints
 #### Core Functionality Tests
 - [ ] Comment button injection
@@ -340,11 +354,19 @@ Key Changes Made:
 4. Improved error message display
 5. Maintained core UI functionality
 
-#### Phase 4.4: Event Handler Cleanup
-- [ ] Remove analytics events
-- [ ] Clean up event listeners
-- [ ] Update user feedback
-- [ ] Verify event flow
+#### Phase 4.4: Event Handler Cleanup (✓ Completed)
+- [x] Remove analytics event handlers from popup
+- [x] Remove analytics event listeners
+- [x] Remove analytics UI components
+- [x] Update platform status handling
+- [x] Test popup functionality
+
+Key Changes Made:
+1. Removed analytics event handlers from popup.js
+2. Removed analytics UI components from popup.html
+3. Simplified platform status checking
+4. Improved error handling in popup
+5. Maintained core popup functionality
 
 #### Phase 4.5: Testing & Verification
 - [ ] Unit Testing
