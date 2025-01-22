@@ -1,4 +1,4 @@
-import TestUtils from './test-utils';
+const TestUtils = require('./test-utils');
 
 describe('LinkedIn Comment Generator Tests', () => {
     let container;

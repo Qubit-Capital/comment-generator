@@ -1,6 +1,6 @@
 // Test utilities for Comment Generator
 
-export class TestUtils {
+class TestUtils {
     /**
      * Simulates a comment field environment
      * @param {string} platform - 'linkedin' or 'breakcold'
@@ -125,5 +125,4 @@ export class TestUtils {
     }
 }
 
-// Export for use in tests
-export default TestUtils;
+module.exports = TestUtils;

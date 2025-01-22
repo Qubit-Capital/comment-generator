@@ -1,4 +1,4 @@
-import TestUtils from './test-utils';
+const TestUtils = require('./test-utils');
 
 describe('Breakcold Comment Generator Tests', () => {
     let container;
