@@ -135,16 +135,93 @@ If issues are encountered:
 
 ### 1. Analysis Phase
 #### 1.1 Dependency Mapping
-- [ ] Identify files interacting with content scripts
-- [ ] Document analytics data flow
-- [ ] Map event listeners and handlers
-- [ ] Create dependency graph
+- [x] Identify files interacting with content scripts
+- [x] Document analytics data flow
+- [x] Map event listeners and handlers
+- [x] Create dependency graph
+
+**Shared Utils Analysis Findings:**
+
+1. utils.js Dependencies:
+   ```javascript
+   Analytics Components:
+   - CustomEvent 'comment-selected' dispatching
+   - Debug logging system feeding analytics
+   - Event listeners for analytics tracking
+   
+   Core Components to Preserve:
+   - UI element creation (buttons, containers)
+   - HTML escaping utilities
+   - Basic error handling
+   - DOM manipulation functions
+   ```
+
+2. api.js Dependencies:
+   ```javascript
+   Analytics Components:
+   - Debug logging system
+   - Error tracking for analytics
+   - API response monitoring
+   - Retry mechanism logging
+   
+   Core Components to Preserve:
+   - API configuration
+   - Text preprocessing
+   - Comment generation logic
+   - Basic error handling
+   - Retry mechanism functionality
+   ```
+
+3. Interaction Points:
+   ```
+   Event Flow:
+   utils.js → analytics-observer.js
+   - Comment selection events
+   - UI interaction events
+   
+   api.js → analytics-observer.js
+   - API call tracking
+   - Error reporting
+   - Performance monitoring
+   ```
+
+4. Required Changes:
+   ```
+   utils.js Modifications:
+   - Remove analytics event dispatching
+   - Simplify logging system
+   - Update error handling
+   - Preserve core UI functionality
+   
+   api.js Modifications:
+   - Remove analytics logging
+   - Simplify error handling
+   - Keep core API functionality
+   - Update response handling
+   ```
 
 #### 1.2 Code Review Checklist
-- [ ] Direct analytics calls
-- [ ] Event dispatching mechanisms
-- [ ] Session storage usage
-- [ ] Analytics-dependent error handling
+- [x] Direct analytics calls
+- [x] Event dispatching mechanisms
+- [x] Session storage usage
+- [x] Analytics-dependent error handling
+
+**Findings Summary:**
+1. Direct Analytics Integration:
+   - Event dispatching in utils.js
+   - Debug logging in both files
+   - Error tracking mechanisms
+
+2. Indirect Dependencies:
+   - Custom events used by analytics
+   - Session storage for analytics data
+   - Error handling callbacks
+
+3. Preservation Requirements:
+   - Core UI functionality
+   - API communication
+   - Error handling for users
+   - Event system for UI
 
 ### 2. Implementation Phases
 
