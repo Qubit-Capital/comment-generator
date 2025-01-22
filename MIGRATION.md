@@ -358,6 +358,142 @@ If issues are encountered:
    □ Performance maintained or improved
    ```
 
+##### api.js Modification Plan
+
+1. **Pre-modification Setup**
+   ```
+   - Create backup of current api.js
+   - Tag current state in git
+   - Create test branch for modifications
+   ```
+
+2. **Code Sections to Modify**
+
+   a. Logging System:
+   ```javascript
+   Current:
+   log(...args) {
+       if (this.DEBUG) console.log('[AI Comment API]', ...args);
+   }
+
+   Change to:
+   log(...args) {
+       if (this.DEBUG && process.env.NODE_ENV !== 'production') {
+           console.log('[AI Comment API]', ...args);
+       }
+   }
+   ```
+
+   b. Error Handling:
+   ```javascript
+   Current:
+   - Retry mechanism with analytics logging
+   - Error tracking for analytics
+   - Performance monitoring
+
+   Change to:
+   - Clean retry mechanism
+   - User-focused error messages
+   - Basic error logging
+   ```
+
+   c. API Response Handling:
+   ```javascript
+   Current:
+   - Response monitoring for analytics
+   - Performance tracking
+   - Detailed debug logging
+
+   Change to:
+   - Essential response validation
+   - Basic success/failure logging
+   - Clean error handling
+   ```
+
+3. **New Functions to Add**
+   ```javascript
+   // Simplified error handling
+   handleApiError(error, context) {
+       console.error(`[AI Comment API] ${context}:`, error);
+       return {
+           success: false,
+           error: this.getUserFriendlyError(error)
+       };
+   }
+
+   // User-friendly error messages
+   getUserFriendlyError(error) {
+       const messages = {
+           'network': 'Connection failed. Please check your internet.',
+           'timeout': 'Request timed out. Please try again.',
+           'server': 'Server error. Please try again later.',
+           'default': 'An error occurred. Please try again.'
+       };
+       return messages[error.type] || messages.default;
+   }
+   ```
+
+4. **Code to Remove**
+   ```javascript
+   - Analytics tracking in retry mechanism
+   - Performance monitoring code
+   - Detailed debug logging
+   - Analytics event dispatching
+   ```
+
+5. **Testing Steps**
+   ```
+   1. API Integration Tests:
+      □ Successful comment generation
+      □ Error handling
+      □ Retry mechanism
+      □ Response validation
+
+   2. Error Handling Tests:
+      □ Network errors
+      □ Timeout handling
+      □ Invalid input
+      □ Server errors
+
+   3. Performance Tests:
+      □ Response times
+      □ Memory usage
+      □ Resource cleanup
+   ```
+
+6. **Verification Checklist**
+   ```
+   □ API calls work correctly
+   □ Error handling is user-friendly
+   □ Retry mechanism functions
+   □ No analytics code remains
+   □ Performance is maintained
+   □ Memory usage is optimized
+   ```
+
+7. **Rollback Procedure**
+   ```
+   1. If API integration fails:
+      - Revert to tagged version
+      - Document API issues
+      - Create new branch for fixes
+
+   2. If production issues:
+      - Immediate revert to backup
+      - Log all issues
+      - Plan alternative approach
+   ```
+
+8. **Success Criteria**
+   ```
+   □ All API calls successful
+   □ Error handling improved
+   □ No analytics code present
+   □ Performance maintained
+   □ Memory usage optimized
+   □ User experience enhanced
+   ```
+
 #### Phase 4.2: Content Script Base Cleanup
 - [ ] Remove analytics event dispatching
 - [ ] Clean up session storage usage
