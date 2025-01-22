@@ -172,20 +172,15 @@ function getPreviousComments(modal) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
+    const modal = document.querySelector('.comment-modal.linkedin');
+    if (!modal) return;
+
+    const loadingContainer = modal.querySelector('.loading-container');
+    const errorMessage = modal.querySelector('.error-message');
+    const commentsList = modal.querySelector('.comments-list');
+
     try {
-        // Create modal if it doesn't exist
-        let modal = document.querySelector('.comment-modal.linkedin');
-        if (!modal) {
-            modal = createCommentModal(button);
-            document.body.appendChild(modal);
-        }
-
-        const loadingContainer = modal.querySelector('.loading-container');
-        const commentsList = modal.querySelector('.comments-list');
-        const errorMessage = modal.querySelector('.error-message');
-
-        // Show modal and loading state
-        modal.classList.remove('hidden');
+        // Reset state
         loadingContainer.style.display = 'block';
         commentsList.style.display = 'none';
         errorMessage.classList.add('hidden');
@@ -225,14 +220,10 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         
     } catch (error) {
         console.error('Error generating comments:', error);
-        const modal = document.querySelector('.comment-modal.linkedin');
         if (modal) {
-            const loadingContainer = modal.querySelector('.loading-container');
-            const errorMessage = modal.querySelector('.error-message');
-            
             loadingContainer.style.display = 'none';
             errorMessage.classList.remove('hidden');
-            errorMessage.querySelector('p').textContent = error.message || 'Failed to generate comments';
+            errorMessage.textContent = error.message || 'Failed to generate comments. Please try again.';
         }
     }
 }
