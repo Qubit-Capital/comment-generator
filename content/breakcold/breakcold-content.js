@@ -168,29 +168,16 @@ async function handleCommentGeneration(event, isRegeneration = false) {
         errorMessage.classList.add('hidden');
         
         const postText = getPostText(targetButton);
-        
-        // Store current comments before regeneration
-        const previousComments = isRegeneration ? 
-            Array.from(commentsList.querySelectorAll('.comment-option'))
-                .map(option => ({
-                    text: option.querySelector('.comment-text').textContent,
-                    type: option.querySelector('.comment-tone').textContent
-                })) : 
-            [];
-        
         const comments = await window.CommentAPI.generateComments(postText, 'breakcold');
         
-        // Track comment generation with regeneration metadata
-        await window.analyticsObserver.trackCommentGeneration('breakcold', postText, comments, {
-            isRegeneration,
-            previousComments,
-            regenerationId: isRegeneration ? crypto.randomUUID() : undefined
-        });
+        if (!comments.success) {
+            throw new Error(comments.error || 'Failed to generate comments');
+        }
         
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
         
-        displayCommentOptions(comments, modal, targetButton, isRegeneration);
+        displayCommentOptions(comments.comments, modal, targetButton, isRegeneration);
         
     } catch (error) {
         console.error('Error generating comments:', error);
@@ -201,6 +188,7 @@ async function handleCommentGeneration(event, isRegeneration = false) {
             
             loadingContainer.style.display = 'none';
             errorMessage.classList.remove('hidden');
+            errorMessage.textContent = error.message || 'Failed to generate comments. Please try again.';
         }
     }
 }
@@ -324,9 +312,6 @@ function displayCommentOptions(comments, modal, button, isRegeneration = false) 
         const useButton = option.querySelector('.use-comment-btn');
         useButton.addEventListener('click', async () => {
             try {
-                // Track comment usage
-                await window.analyticsObserver.trackCommentUsage('breakcold', index, comment.text || comment);
-                
                 const commentField = findCommentField(button);
                 if (commentField) {
                     insertComment(commentField, comment.text || comment);
@@ -337,6 +322,7 @@ function displayCommentOptions(comments, modal, button, isRegeneration = false) 
                 }
             } catch (error) {
                 console.error('Error using comment:', error);
+                showNotification('Failed to use comment. Please try again.', 'error');
             }
         });
         
