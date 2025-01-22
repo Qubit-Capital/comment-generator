@@ -19,7 +19,7 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
-        "analytics-observer.js",
+        "shared/stubs.js",
         "content/linkedin/linkedin-content.js"
       ],
       "css": ["styles/styles.css"],
@@ -33,7 +33,7 @@
       "js": [
         "shared/api.js",
         "shared/utils.js",
-        "analytics-observer.js",
+        "shared/stubs.js",
         "content/breakcold/breakcold-content.js"
       ],
       "css": ["styles/styles.css"],
@@ -45,11 +45,7 @@
       "resources": [
         "shared/*",
         "content/*",
-        "styles/*",
-        "analytics.html",
-        "analytics.js",
-        "analytics-handler.js",
-        "analytics-observer.js"
+        "styles/*"
       ],
       "matches": [
         "*://*.linkedin.com/*",
