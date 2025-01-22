@@ -211,37 +211,18 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         // Get post info
         const { text: postText, postId } = await getPostInfo(button);
 
-        // Store current comments before regeneration
-        const previousComments = isRegeneration ? getPreviousComments(modal) : [];
-        const regenerationId = isRegeneration ? crypto.randomUUID() : undefined;
-
         // Generate comments using CommentAPI
         const comments = await window.CommentAPI.generateComments(postText, 'linkedin');
-
-        // Store generation state
-        sessionStorage.setItem('currentPostId', postId);
-        sessionStorage.setItem('currentPostText', postText);
-        sessionStorage.setItem('generatedComments', JSON.stringify(comments));
-        if (isRegeneration) {
-            sessionStorage.setItem('previousComments', JSON.stringify(previousComments));
-            sessionStorage.setItem('regenerationId', regenerationId);
-        }
-
-        // Track the generation event
-        if (window.analyticsObserver) {
-            window.analyticsObserver.trackCommentGeneration('linkedin', postText, comments, {
-                postId,
-                isRegeneration,
-                previousComments,
-                regenerationId
-            });
+        
+        if (!comments.success) {
+            throw new Error(comments.error || 'Failed to generate comments');
         }
 
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
         
         // Display comments with proper structure and type
-        const formattedComments = comments.map(comment => {
+        const formattedComments = comments.comments.map(comment => {
             // Extract the tone from the comment
             let type = 'Neutral';
             if (typeof comment === 'object' && comment.type) {
@@ -299,25 +280,18 @@ function displayCommentOptions(comments, modal, button, postId, isRegeneration =
         // Handle comment selection
         const useButton = commentOption.querySelector('.use-comment-btn');
         useButton.addEventListener('click', async () => {
-            const commentField = findCommentField(button);
-            if (commentField) {
-                insertComment(commentField, comment.text);
-                modal.classList.add('hidden');
-
-                // Track comment selection
-                if (window.analyticsObserver) {
-                    window.analyticsObserver.trackCommentSelection('linkedin', {
-                        text: comment.text,
-                        index,
-                        tone: comment.type,
-                        isRegenerated: isRegeneration,
-                        regenerationId: sessionStorage.getItem('regenerationId')
-                    }, postId);
+            try {
+                const commentField = findCommentField(button);
+                if (commentField) {
+                    insertComment(commentField, comment.text);
+                    modal.classList.add('hidden');
+                    showNotification('Comment added successfully!', 'success');
+                } else {
+                    showNotification('Could not find comment field. Please try again.', 'error');
                 }
-
-                showNotification('Comment added successfully!', 'success');
-            } else {
-                showNotification('Could not find comment field. Please try again.', 'error');
+            } catch (error) {
+                console.error('Error using comment:', error);
+                showNotification('Failed to use comment. Please try again.', 'error');
             }
         });
 
