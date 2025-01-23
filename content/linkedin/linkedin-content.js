@@ -162,7 +162,7 @@ async function getPostInfo(button) {
         const postContainer = button.closest('.feed-shared-update-v2') || 
                             button.closest('.feed-shared-post') ||
                             button.closest('.feed-shared-update');
-
+                         
         log('Post container found:', !!postContainer);
         
         if (!postContainer) {
@@ -457,14 +457,22 @@ function injectButtonForCommentField(commentField) {
     
     // Create and inject button
     const button = createCommentButton();
-    button.addEventListener('click', async () => {
-        // Create modal if it doesn't exist
-        let modal = document.querySelector('.comment-modal.linkedin');
-        if (!modal) {
-            modal = createCommentModal(button);
-            document.body.appendChild(modal);
+    button.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        log('Generate comment button clicked');
+        
+        try {
+            // First create and show the modal
+            const modal = showModal(button);
+            // Ensure modal is visible
+            modal.style.display = 'flex';
+            // Then start comment generation
+            await handleCommentGeneration(button);
+        } catch (error) {
+            log('Error in button click handler:', error);
+            showNotification('Failed to generate comments. Please try again.', 'error');
         }
-        handleCommentGeneration(button);
     });
     toolbar.insertBefore(button, toolbar.firstChild);
     log('Button injected successfully');
@@ -474,8 +482,11 @@ function injectButtonForCommentField(commentField) {
 function createCommentButton() {
     const button = document.createElement('button');
     button.className = 'ai-comment-generator-btn';
-    button.innerHTML = 'Generate Comment';
-    button.style.marginRight = '8px';
+    button.innerHTML = `
+        <span class="btn-icon">✨</span>
+        <span>Generate Comment</span>
+    `;
+    
     return button;
 }
 

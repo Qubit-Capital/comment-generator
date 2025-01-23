@@ -54,9 +54,9 @@ class CommentAPI {
                     },
                     body: JSON.stringify({
                         params: {
+                            linkedin_url: "",
                             text: cleanText,
-                            platform: platform,
-                            tone: 'professional'
+                            platform: platform
                         },
                         project: window.API_CONFIG.projectId
                     })
@@ -73,6 +73,7 @@ class CommentAPI {
                 }
 
                 const data = await response.json();
+                this.log('API Response:', data);
                 
                 if (!data.output || !data.output.answer) {
                     throw new Error('Invalid response format from API');
@@ -80,6 +81,7 @@ class CommentAPI {
 
                 // Parse the answer which is a JSON string wrapped in markdown code block
                 const cleanAnswer = data.output.answer.replace(/```json\n?|\n?```/g, '').trim();
+                this.log('Clean Answer:', cleanAnswer);
                 const parsedData = JSON.parse(cleanAnswer);
 
                 if (!parsedData || !Array.isArray(parsedData.comments)) {
