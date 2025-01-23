@@ -4,7 +4,8 @@ class CommentAPI {
         this.API_CONFIG = {
             studioId: 'e24e0d8f-55bc-42b3-b4c0-ef86b7f9746c',
             projectId: '8cdcb88c-3a0b-44b1-915e-09454e18f5e5',
-            baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios'
+            baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios',
+            apiKey: 'sk_prod_TK1WX4M-47XZPK2-CJNQ5YD-Q9VBGR8' // API key for authentication
         };
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second delay between retries
@@ -50,11 +51,14 @@ class CommentAPI {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.API_CONFIG.apiKey}`
                     },
                     body: JSON.stringify({
                         params: {
-                            linked_in_post: cleanText
+                            text: cleanText,
+                            platform: platform,
+                            tone: 'professional'
                         },
                         project: this.API_CONFIG.projectId
                     })
@@ -62,7 +66,7 @@ class CommentAPI {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`API request failed: ${response.status} - ${errorData.message || response.statusText}`);
+                    throw new Error(`API request failed with status ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -80,7 +84,10 @@ class CommentAPI {
                 }
 
                 this.log('Successfully generated comments');
-                return parsedData.comments;
+                return {
+                    success: true,
+                    comments: parsedData.comments
+                };
 
             } catch (error) {
                 lastError = error;

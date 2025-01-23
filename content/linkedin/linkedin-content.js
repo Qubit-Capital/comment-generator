@@ -190,87 +190,40 @@ function getPreviousComments(modal) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
+    const modal = document.querySelector('.comment-modal.linkedin');
+    if (!modal) return;
+
+    const loadingContainer = modal.querySelector('.loading-container');
+    const errorMessage = modal.querySelector('.error-message');
+    const commentsList = modal.querySelector('.comments-list');
+
     try {
-        // Create modal if it doesn't exist
-        let modal = document.querySelector('.comment-modal.linkedin');
-        if (!modal) {
-            modal = createCommentModal(button);
-            document.body.appendChild(modal);
-        }
-
-        const loadingContainer = modal.querySelector('.loading-container');
-        const commentsList = modal.querySelector('.comments-list');
-        const errorMessage = modal.querySelector('.error-message');
-
-        // Show modal and loading state
-        modal.classList.remove('hidden');
+        // Reset state
         loadingContainer.style.display = 'block';
         commentsList.style.display = 'none';
         errorMessage.classList.add('hidden');
 
         // Get post info
         const { text: postText, postId } = await getPostInfo(button);
-
-        // Store current comments before regeneration
-        const previousComments = isRegeneration ? getPreviousComments(modal) : [];
-        const regenerationId = isRegeneration ? crypto.randomUUID() : undefined;
-
+        
         // Generate comments using CommentAPI
-        const comments = await window.CommentAPI.generateComments(postText, 'linkedin');
-
-        // Store generation state
-        sessionStorage.setItem('currentPostId', postId);
-        sessionStorage.setItem('currentPostText', postText);
-        sessionStorage.setItem('generatedComments', JSON.stringify(comments));
-        if (isRegeneration) {
-            sessionStorage.setItem('previousComments', JSON.stringify(previousComments));
-            sessionStorage.setItem('regenerationId', regenerationId);
-        }
-
-        // Track the generation event
-        if (window.analyticsObserver) {
-            window.analyticsObserver.trackCommentGeneration('linkedin', postText, comments, {
-                postId,
-                isRegeneration,
-                previousComments,
-                regenerationId
-            });
+        const result = await window.CommentAPI.generateComments(postText, 'linkedin');
+        
+        if (!result || !result.success) {
+            throw new Error(result?.error || 'Failed to generate comments');
         }
 
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
-        
-        // Display comments with proper structure and type
-        const formattedComments = comments.map(comment => {
-            // Extract the tone from the comment
-            let type = 'Neutral';
-            if (typeof comment === 'object' && comment.type) {
-                // Handle detailed tone format like "Friendly (Informational)"
-                const toneMatch = comment.type.match(/^(\w+)/);
-                type = toneMatch ? toneMatch[1] : comment.type;
-            } else if (typeof comment === 'object' && comment.tone) {
-                type = comment.tone;
-            }
 
-            return {
-                text: typeof comment === 'object' ? comment.text : comment,
-                type: type
-            };
-        });
+        // Display comments
+        displayCommentOptions(result.comments, modal, button, postId, isRegeneration);
 
-        displayCommentOptions(formattedComments, modal, button, postId, isRegeneration);
-        
     } catch (error) {
         console.error('Error generating comments:', error);
-        const modal = document.querySelector('.comment-modal.linkedin');
-        if (modal) {
-            const loadingContainer = modal.querySelector('.loading-container');
-            const errorMessage = modal.querySelector('.error-message');
-            
-            loadingContainer.style.display = 'none';
-            errorMessage.classList.remove('hidden');
-            errorMessage.querySelector('p').textContent = error.message || 'Failed to generate comments';
-        }
+        loadingContainer.style.display = 'none';
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = error.message || 'Failed to generate comments. Please try again.';
     }
 }
 
