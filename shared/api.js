@@ -28,9 +28,9 @@ class CommentAPI {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async generateComments(text, platform) {
-        if (!text || !platform) {
-            throw new Error('Missing required parameters: text and platform');
+    async generateComments(text, platform, linkedinUrn = '') {
+        if (!platform) {
+            throw new Error('Missing required parameter: platform');
         }
 
         if (!window.API_CONFIG) {
@@ -46,19 +46,25 @@ class CommentAPI {
                 this.log(`Attempt ${attempt} of ${this.maxRetries}`);
                 const apiUrl = `${window.API_CONFIG.baseUrl}/${window.API_CONFIG.studioId}/trigger_limited`;
                 
+                const requestBody = {
+                    params: {
+                        linkedin_urn: linkedinUrn || "",
+                    },
+                    project: window.API_CONFIG.projectId
+                };
+
+                // Only include text if linkedin_urn is empty
+                if (!linkedinUrn) {
+                    requestBody.params.text = cleanText;
+                }
+
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': window.API_CONFIG.apiKey
                     },
-                    body: JSON.stringify({
-                        params: {
-                            linkedin_urn: "",
-                            text: cleanText
-                        },
-                        project: window.API_CONFIG.projectId
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -87,25 +93,20 @@ class CommentAPI {
                     throw new Error('Invalid comments data format');
                 }
 
-                this.log('Successfully generated comments');
-                return {
-                    success: true,
-                    comments: parsedData.comments
-                };
-
+                return parsedData.comments;
             } catch (error) {
-                lastError = error;
                 this.log(`Attempt ${attempt} failed:`, error);
+                lastError = error;
                 
+                // Wait before retrying
                 if (attempt < this.maxRetries) {
-                    const delay = this.retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
-                    this.log(`Retrying in ${delay}ms...`);
-                    await this.delay(delay);
+                    await this.delay(this.retryDelay);
                 }
             }
         }
 
-        throw lastError || new Error('Failed to generate comments after retries');
+        // If all attempts fail, throw the last error
+        throw lastError || new Error('Failed to generate comments');
     }
 }
 

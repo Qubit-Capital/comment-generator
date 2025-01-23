@@ -157,6 +157,7 @@ async function getPostInfo(button) {
     try {
         let text = '';
         let postId = '';
+        let linkedinUrn = '';
 
         // Find the post container
         const postContainer = button.closest('.feed-shared-update-v2') || 
@@ -169,14 +170,19 @@ async function getPostInfo(button) {
             throw new Error('Could not find post container');
         }
 
-        // Get post ID
-        postId = postContainer.getAttribute('data-id') || 
-                postContainer.getAttribute('data-urn') || 
-                `post_${Date.now()}`;
+        // Extract full URN and numeric part
+        const fullUrn = postContainer.getAttribute('data-urn') || 
+                        postContainer.getAttribute('data-id') || 
+                        `post_${Date.now()}`;
         
-        log('Post ID:', postId);
+        // Extract numeric part of URN using regex
+        const urnMatch = fullUrn.match(/\d+$/);
+        linkedinUrn = urnMatch ? urnMatch[0] : '';
+        
+        log('Full URN:', fullUrn);
+        log('Extracted LinkedIn URN:', linkedinUrn);
 
-        // Find post text
+        // Find post text (kept for potential future use or fallback)
         const textContainer = postContainer.querySelector('.feed-shared-text') || 
                             postContainer.querySelector('.feed-shared-text-view') ||
                             postContainer.querySelector('.feed-shared-inline-show-more-text');
@@ -205,12 +211,17 @@ async function getPostInfo(button) {
             text = 'No post text found. Please generate a general comment.';
         }
 
-        return { text, postId };
+        return { 
+            text, 
+            postId: fullUrn, 
+            linkedinUrn 
+        };
     } catch (error) {
         log('Error getting post info:', error);
         return {
             text: 'No post text found. Please generate a general comment.',
-            postId: `post_${Date.now()}`
+            postId: `post_${Date.now()}`,
+            linkedinUrn: ''
         };
     }
 }
@@ -229,65 +240,61 @@ function getPreviousComments(modal) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
-    log('Starting comment generation...');
-    
-    let modal = document.querySelector('.comment-modal.linkedin');
-    
-    if (!modal) {
-        log('Creating new modal...');
-        modal = showModal(button);
-        // Wait for modal to be fully rendered
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    const loadingContainer = modal.querySelector('.loading-container');
-    const errorMessage = modal.querySelector('.error-message');
-    const commentsList = modal.querySelector('.comments-list');
-
-    if (!loadingContainer || !errorMessage || !commentsList) {
-        log('Error: Modal elements not found', { loadingContainer, errorMessage, commentsList });
-        throw new Error('Modal elements not properly initialized');
-    }
-
     try {
-        // Reset state
-        loadingContainer.style.display = 'flex';
-        commentsList.style.display = 'none';
-        errorMessage.classList.add('hidden');
+        // Show loading state
+        const modal = document.querySelector('.comment-modal.linkedin') || 
+                     createModalHTML();
+        modal.classList.add('loading');
+        document.body.appendChild(modal);
 
         // Get post info
         log('Getting post info...');
-        const { text: postText, postId } = await getPostInfo(button);
-        log('Post info:', { postText: postText.substring(0, 100) + '...', postId });
+        const { text: postText, postId, linkedinUrn } = await getPostInfo(button);
+        log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn });
         
         if (!window.API_CONFIG) {
             log('Error: API_CONFIG not found');
-            throw new Error('API configuration not found. Please reload the extension.');
-        }
-        
-        // Generate comments using CommentAPI
-        log('Generating comments...');
-        const result = await window.CommentAPI.generateComments(postText, 'linkedin');
-        log('Generation result:', result);
-        
-        if (!result || !result.success) {
-            throw new Error(result?.error || 'Failed to generate comments');
+            showNotification('API configuration error', 'error');
+            return;
         }
 
-        loadingContainer.style.display = 'none';
-        commentsList.style.display = 'block';
+        // Determine platform
+        const platform = 'linkedin';
+
+        // Generate comments
+        log('Generating comments...');
+        const comments = await window.CommentAPI.generateComments(
+            postText, 
+            platform, 
+            linkedinUrn
+        );
 
         // Display comments
-        log('Displaying comments...');
-        displayCommentOptions(result.comments, modal, button, postId, isRegeneration);
+        log('Comments generated:', comments);
+        displayCommentOptions(comments, modal, button, postId, isRegeneration);
 
+        // Remove loading state
+        modal.classList.remove('loading');
     } catch (error) {
-        log('Error generating comments:', error);
-        loadingContainer.style.display = 'none';
-        errorMessage.classList.remove('hidden');
-        if (errorMessage.querySelector('p')) {
-            errorMessage.querySelector('p').textContent = error.message || 'Failed to generate comments. Please try again.';
+        log('Comment generation error:', error);
+        
+        // Show error in modal
+        const modal = document.querySelector('.comment-modal.linkedin');
+        if (modal) {
+            const errorMessageEl = modal.querySelector('.error-message');
+            if (errorMessageEl) {
+                errorMessageEl.classList.remove('hidden');
+                errorMessageEl.querySelector('p').textContent = 
+                    error.message || 'Failed to generate comments. Please try again.';
+            }
+            modal.classList.remove('loading');
         }
+
+        // Show notification
+        showNotification(
+            error.message || 'Failed to generate comments', 
+            'error'
+        );
     }
 }
 
