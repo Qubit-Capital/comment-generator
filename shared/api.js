@@ -50,7 +50,7 @@ class CommentAPI {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${window.API_CONFIG.apiKey}`
+                        'Authorization': window.API_CONFIG.apiKey
                     },
                     body: JSON.stringify({
                         params: {
@@ -64,7 +64,12 @@ class CommentAPI {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`API request failed with status ${response.status}`);
+                    this.log('API Error:', errorData);
+                    throw new Error(
+                        errorData.error?.message || 
+                        errorData.message || 
+                        `API request failed with status ${response.status}`
+                    );
                 }
 
                 const data = await response.json();
