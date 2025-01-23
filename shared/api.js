@@ -54,9 +54,8 @@ class CommentAPI {
                     },
                     body: JSON.stringify({
                         params: {
-                            linkedin_url: "",
-                            text: cleanText,
-                            platform: platform
+                            linkedin_urn: "",
+                            text: cleanText
                         },
                         project: window.API_CONFIG.projectId
                     })
