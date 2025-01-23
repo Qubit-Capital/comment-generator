@@ -18,6 +18,7 @@
     {
       "matches": ["*://*.linkedin.com/*"],
       "js": [
+        "shared/config.js",
         "shared/api.js",
         "shared/utils.js",
         "content/linkedin/linkedin-content.js"
@@ -31,6 +32,7 @@
         "*://*.app.breakcold.com/*"
       ],
       "js": [
+        "shared/config.js",
         "shared/api.js",
         "shared/utils.js",
         "content/breakcold/breakcold-content.js"

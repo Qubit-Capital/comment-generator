@@ -153,6 +153,7 @@ function createCommentModal(button) {
 
 // Function to get post text and ID
 async function getPostInfo(button) {
+    log('Getting post info...');
     try {
         let text = '';
         let postId = '';
@@ -162,6 +163,8 @@ async function getPostInfo(button) {
                             button.closest('.feed-shared-post') ||
                             button.closest('.feed-shared-update');
 
+        log('Post container found:', !!postContainer);
+        
         if (!postContainer) {
             throw new Error('Could not find post container');
         }
@@ -170,33 +173,41 @@ async function getPostInfo(button) {
         postId = postContainer.getAttribute('data-id') || 
                 postContainer.getAttribute('data-urn') || 
                 `post_${Date.now()}`;
+        
+        log('Post ID:', postId);
 
         // Find post text
         const textContainer = postContainer.querySelector('.feed-shared-text') || 
                             postContainer.querySelector('.feed-shared-text-view') ||
                             postContainer.querySelector('.feed-shared-inline-show-more-text');
 
+        log('Text container found:', !!textContainer);
+        
         if (textContainer) {
             text = textContainer.textContent.trim();
+            log('Text content length:', text.length);
         }
 
         // If no text found, try other selectors
         if (!text) {
+            log('No text found in primary container, trying alternates...');
             const alternateTextContainer = postContainer.querySelector('.feed-shared-update-v2__description-wrapper') ||
                                         postContainer.querySelector('.feed-shared-update__description-wrapper');
             if (alternateTextContainer) {
                 text = alternateTextContainer.textContent.trim();
+                log('Alternate text content length:', text.length);
             }
         }
 
         // If still no text, use a default message
         if (!text) {
+            log('No text found in any container');
             text = 'No post text found. Please generate a general comment.';
         }
 
         return { text, postId };
     } catch (error) {
-        console.error('Error getting post info:', error);
+        log('Error getting post info:', error);
         return {
             text: 'No post text found. Please generate a general comment.',
             postId: `post_${Date.now()}`
@@ -218,15 +229,25 @@ function getPreviousComments(modal) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
+    log('Starting comment generation...');
+    
     let modal = document.querySelector('.comment-modal.linkedin');
     
     if (!modal) {
+        log('Creating new modal...');
         modal = showModal(button);
+        // Wait for modal to be fully rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     const loadingContainer = modal.querySelector('.loading-container');
     const errorMessage = modal.querySelector('.error-message');
     const commentsList = modal.querySelector('.comments-list');
+
+    if (!loadingContainer || !errorMessage || !commentsList) {
+        log('Error: Modal elements not found', { loadingContainer, errorMessage, commentsList });
+        throw new Error('Modal elements not properly initialized');
+    }
 
     try {
         // Reset state
@@ -235,10 +256,19 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         errorMessage.classList.add('hidden');
 
         // Get post info
+        log('Getting post info...');
         const { text: postText, postId } = await getPostInfo(button);
+        log('Post info:', { postText: postText.substring(0, 100) + '...', postId });
+        
+        if (!window.API_CONFIG) {
+            log('Error: API_CONFIG not found');
+            throw new Error('API configuration not found. Please reload the extension.');
+        }
         
         // Generate comments using CommentAPI
+        log('Generating comments...');
         const result = await window.CommentAPI.generateComments(postText, 'linkedin');
+        log('Generation result:', result);
         
         if (!result || !result.success) {
             throw new Error(result?.error || 'Failed to generate comments');
@@ -248,13 +278,16 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         commentsList.style.display = 'block';
 
         // Display comments
+        log('Displaying comments...');
         displayCommentOptions(result.comments, modal, button, postId, isRegeneration);
 
     } catch (error) {
-        console.error('Error generating comments:', error);
+        log('Error generating comments:', error);
         loadingContainer.style.display = 'none';
         errorMessage.classList.remove('hidden');
-        errorMessage.querySelector('p').textContent = error.message || 'Failed to generate comments. Please try again.';
+        if (errorMessage.querySelector('p')) {
+            errorMessage.querySelector('p').textContent = error.message || 'Failed to generate comments. Please try again.';
+        }
     }
 }
 
