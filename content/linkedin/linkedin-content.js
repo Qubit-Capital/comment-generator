@@ -275,19 +275,23 @@ async function handleCommentGeneration(button, isRegeneration = false) {
 
         // Generate comments
         log('Generating comments...');
-        const comments = await window.CommentAPI.generateComments(
+        const result = await window.CommentAPI.generateComments(
             postText, 
             'linkedin', 
             linkedinUrn
         );
+
+        if (!result || !result.success || !Array.isArray(result.comments)) {
+            throw new Error(result?.error || 'Failed to generate comments');
+        }
 
         // Hide loading state
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
 
         // Display comments
-        log('Comments generated:', comments);
-        displayCommentOptions(comments, modal, button, postId, isRegeneration);
+        log('Comments generated:', result.comments);
+        displayCommentOptions(result.comments, modal, button, postId, isRegeneration);
 
     } catch (error) {
         log('Comment generation error:', error);

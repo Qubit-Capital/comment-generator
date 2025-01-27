@@ -199,26 +199,39 @@ body {
 }
 
 .comment-tone {
+    display: inline-block;
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
-    text-transform: capitalize;
+    margin-bottom: 8px;
 }
 
-.comment-tone.professional {
-    background-color: #e8f0fe;
-    color: #1967d2;
+.comment-tone.professional,
+.comment-tone.neutral {
+    background-color: #E8F0FE;
+    color: #1A73E8;
 }
 
-.comment-tone.casual {
-    background-color: #fce8e6;
-    color: #d93025;
-}
-
-.comment-tone.friendly {
-    background-color: #e6f4ea;
+.comment-tone.friendly,
+.comment-tone.supportive {
+    background-color: #E6F4EA;
     color: #137333;
+}
+
+.comment-tone.serious {
+    background-color: #FEF7E0;
+    color: #B06000;
+}
+
+.comment-tone.humorous {
+    background-color: #FCE8E6;
+    color: #D93025;
+}
+
+.comment-tone {
+    background-color: #F1F3F4;
+    color: #5F6368;
 }
 
 .comment-text {
@@ -384,34 +397,6 @@ body {
 .header-buttons button:hover {
     background-color: #f3f4f6;
     color: #111827;
-}
-
-/* Comment Tone Styles */
-.comment-tone {
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    font-family: inherit;
-}
-
-.comment-tone.neutral {
-    background-color: #e5e7eb;
-    color: #374151;
-}
-
-.comment-tone.friendly {
-    background-color: #bfdbfe;
-    color: #1e40af;
-}
-
-.comment-tone.professional {
-    background-color: #c7d2fe;
-    color: #3730a3;
-}
-
-.comment-tone.casual {
-    background-color: #fde68a;
-    color: #92400e;
 }
 
 /* Post samples styles */

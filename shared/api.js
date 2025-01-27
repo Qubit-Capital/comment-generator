@@ -29,6 +29,43 @@ class CommentAPI {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    normalizeCommentType(type) {
+        if (!type) return 'Professional';
+
+        // Remove parentheses and content within them
+        const baseType = type.split('(')[0].trim();
+
+        // Map of complex types to simple ones
+        const typeMap = {
+            'Informational': 'Neutral',
+            'Personal Experience': 'Friendly',
+            'Constructive Criticism': 'Serious',
+            'Agreement with Expansion': 'Supportive',
+            'Humorous': 'Humorous'
+        };
+
+        return typeMap[baseType] || baseType;
+    }
+
+    validateComments(comments) {
+        if (!Array.isArray(comments)) {
+            throw new Error('Comments must be an array');
+        }
+
+        return comments.map(comment => {
+            if (!comment.text || typeof comment.text !== 'string') {
+                throw new Error('Invalid comment text format');
+            }
+
+            // Normalize comment type
+            const normalizedType = this.normalizeCommentType(comment.type);
+            return {
+                text: comment.text,
+                type: normalizedType
+            };
+        });
+    }
+
     extractComments(parsedData) {
         // Case 1: Final_output is directly an array of comments
         if (Array.isArray(parsedData.Final_output)) {
@@ -50,25 +87,6 @@ class CommentAPI {
         
         this.log('No valid comments found in response:', parsedData);
         throw new Error('No valid comments found in response');
-    }
-
-    validateComments(comments) {
-        if (!Array.isArray(comments)) {
-            throw new Error('Comments must be an array');
-        }
-
-        return comments.map(comment => {
-            if (!comment.text || typeof comment.text !== 'string') {
-                throw new Error('Invalid comment text format');
-            }
-
-            // Normalize comment type
-            const type = comment.type || 'Professional';
-            return {
-                text: comment.text,
-                type: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
-            };
-        });
     }
 
     async generateComments(text, platform, linkedinUrn = '') {
@@ -140,7 +158,12 @@ class CommentAPI {
 
             // Extract and validate comments
             const comments = this.extractComments(parsedData);
-            return this.validateComments(comments);
+            const normalizedComments = this.validateComments(comments);
+
+            return {
+                success: true,
+                comments: normalizedComments
+            };
 
         } catch (error) {
             this.log('Error generating comments:', error);
