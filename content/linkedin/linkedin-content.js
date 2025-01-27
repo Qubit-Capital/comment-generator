@@ -240,12 +240,29 @@ function getPreviousComments(modal) {
 
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
+    let modal = document.querySelector('.comment-modal.linkedin');
+    
     try {
-        // Show loading state
-        const modal = document.querySelector('.comment-modal.linkedin') || 
-                     createModalHTML();
+        // Create modal if it doesn't exist
+        if (!modal) {
+            modal = createModalHTML();
+            document.body.appendChild(modal);
+        }
+
+        // Show modal and loading state
         modal.classList.add('loading');
-        document.body.appendChild(modal);
+        const loadingContainer = modal.querySelector('.loading-container');
+        const errorMessage = modal.querySelector('.error-message');
+        const commentsList = modal.querySelector('.comments-list');
+
+        if (!loadingContainer || !errorMessage || !commentsList) {
+            throw new Error('Modal elements not properly initialized');
+        }
+
+        // Reset modal state
+        loadingContainer.style.display = 'flex';
+        commentsList.style.display = 'none';
+        errorMessage.classList.remove('visible');
 
         // Get post info
         log('Getting post info...');
@@ -253,41 +270,52 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn });
         
         if (!window.API_CONFIG) {
-            log('Error: API_CONFIG not found');
-            showNotification('API configuration error', 'error');
-            return;
+            throw new Error('API configuration not found');
         }
-
-        // Determine platform
-        const platform = 'linkedin';
 
         // Generate comments
         log('Generating comments...');
         const comments = await window.CommentAPI.generateComments(
             postText, 
-            platform, 
+            'linkedin', 
             linkedinUrn
         );
+
+        // Hide loading state
+        loadingContainer.style.display = 'none';
+        commentsList.style.display = 'block';
 
         // Display comments
         log('Comments generated:', comments);
         displayCommentOptions(comments, modal, button, postId, isRegeneration);
 
-        // Remove loading state
-        modal.classList.remove('loading');
     } catch (error) {
         log('Comment generation error:', error);
         
-        // Show error in modal
-        const modal = document.querySelector('.comment-modal.linkedin');
         if (modal) {
-            const errorMessageEl = modal.querySelector('.error-message');
-            if (errorMessageEl) {
-                errorMessageEl.classList.remove('hidden');
-                errorMessageEl.querySelector('p').textContent = 
-                    error.message || 'Failed to generate comments. Please try again.';
+            const loadingContainer = modal.querySelector('.loading-container');
+            const errorMessage = modal.querySelector('.error-message');
+            
+            if (loadingContainer) {
+                loadingContainer.style.display = 'none';
             }
-            modal.classList.remove('loading');
+            
+            if (errorMessage) {
+                errorMessage.classList.add('visible');
+                errorMessage.innerHTML = `
+                    <p>${error.message || 'Failed to generate comments. Please try again.'}</p>
+                    <button class="retry-btn">Retry</button>
+                `;
+
+                // Add retry button handler
+                const retryBtn = errorMessage.querySelector('.retry-btn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', () => {
+                        errorMessage.classList.remove('visible');
+                        handleCommentGeneration(button, isRegeneration);
+                    });
+                }
+            }
         }
 
         // Show notification
@@ -295,6 +323,11 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             error.message || 'Failed to generate comments', 
             'error'
         );
+    } finally {
+        // Remove loading state from modal
+        if (modal) {
+            modal.classList.remove('loading');
+        }
     }
 }
 
