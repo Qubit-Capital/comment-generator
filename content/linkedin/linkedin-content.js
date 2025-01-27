@@ -5,7 +5,7 @@ const log = (...args) => DEBUG && console.log('[AI Comment Generator]', ...args)
 // Function to create modal HTML
 function createModalHTML() {
     const modal = document.createElement('div');
-    modal.className = 'comment-modal linkedin';
+    modal.className = 'ai-comment-modal';
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -20,7 +20,7 @@ function createModalHTML() {
                     <button class="close-modal">×</button>
                 </div>
             </div>
-            <div class="loading-container">
+            <div class="loading-container hidden">
                 <div class="loading-spinner">
                     <div class="spinner"></div>
                 </div>
@@ -33,52 +33,6 @@ function createModalHTML() {
             <div class="comments-list"></div>
         </div>
     `;
-    return modal;
-}
-
-// Function to create and show modal
-function showModal(button) {
-    // Remove any existing modals
-    const existingModal = document.querySelector('.comment-modal.linkedin');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
-    const modal = createModalHTML();
-    document.body.appendChild(modal);
-
-    // Store a reference to the button that opened the modal
-    modal.dataset.buttonId = button.id || `comment-btn-${Date.now()}`;
-    if (!button.id) {
-        button.id = modal.dataset.buttonId;
-    }
-
-    // Add event listeners
-    const closeBtn = modal.querySelector('.close-modal');
-    const regenerateBtn = modal.querySelector('.regenerate-btn');
-    const retryBtn = modal.querySelector('.retry-btn');
-
-    closeBtn.addEventListener('click', () => {
-        modal.remove();
-    });
-
-    regenerateBtn.addEventListener('click', async () => {
-        try {
-            await handleCommentGeneration(button, true);
-        } catch (error) {
-            console.error('Error regenerating comments:', error);
-            const errorMessage = modal.querySelector('.error-message');
-            errorMessage.classList.remove('hidden');
-            errorMessage.querySelector('p').textContent = 'Failed to regenerate comments. Please try again.';
-        }
-    });
-
-    retryBtn.addEventListener('click', async () => {
-        const errorMessage = modal.querySelector('.error-message');
-        errorMessage.classList.add('hidden');
-        await handleCommentGeneration(button, false);
-    });
-
     return modal;
 }
 
@@ -121,6 +75,15 @@ function createCommentModal(button) {
 
     // Close button handler
     modal.querySelector('.modal-close').addEventListener('click', () => {
+        // Dispatch close event before hiding modal
+        const closeEvent = new CustomEvent('popupClose', {
+            detail: {
+                postId: sessionStorage.getItem('currentPostId'),
+                closeType: 'close_button'
+            }
+        });
+        document.dispatchEvent(closeEvent);
+
         modal.classList.add('hidden');
         setTimeout(() => {
             modal.remove();
@@ -135,7 +98,7 @@ function createCommentModal(button) {
         } catch (error) {
             console.error('Error regenerating comments:', error);
             const errorMessage = modal.querySelector('.error-message');
-            errorMessage.textContent = error.message || 'Failed to regenerate comments. Please try again.';
+            errorMessage.textContent = 'Failed to regenerate comments. Please try again.';
             errorMessage.classList.remove('hidden');
         }
     });
@@ -143,6 +106,15 @@ function createCommentModal(button) {
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+            // Dispatch outside click event before closing
+            const clickEvent = new CustomEvent('popupOutsideClick', {
+                detail: {
+                    postId: sessionStorage.getItem('currentPostId'),
+                    closeType: 'outside_click'
+                }
+            });
+            document.dispatchEvent(clickEvent);
+
             modal.querySelector('.modal-close').click();
         }
     });
@@ -153,75 +125,53 @@ function createCommentModal(button) {
 
 // Function to get post text and ID
 async function getPostInfo(button) {
-    log('Getting post info...');
     try {
         let text = '';
         let postId = '';
-        let linkedinUrn = '';
 
         // Find the post container
         const postContainer = button.closest('.feed-shared-update-v2') || 
                             button.closest('.feed-shared-post') ||
                             button.closest('.feed-shared-update');
-                         
-        log('Post container found:', !!postContainer);
-        
+
         if (!postContainer) {
             throw new Error('Could not find post container');
         }
 
-        // Extract full URN and numeric part
-        const fullUrn = postContainer.getAttribute('data-urn') || 
-                        postContainer.getAttribute('data-id') || 
-                        `post_${Date.now()}`;
-        
-        // Extract numeric part of URN using regex
-        const urnMatch = fullUrn.match(/\d+$/);
-        linkedinUrn = urnMatch ? urnMatch[0] : '';
-        
-        log('Full URN:', fullUrn);
-        log('Extracted LinkedIn URN:', linkedinUrn);
+        // Get post ID
+        postId = postContainer.getAttribute('data-id') || 
+                postContainer.getAttribute('data-urn') || 
+                `post_${Date.now()}`;
 
-        // Find post text (kept for potential future use or fallback)
+        // Find post text
         const textContainer = postContainer.querySelector('.feed-shared-text') || 
                             postContainer.querySelector('.feed-shared-text-view') ||
                             postContainer.querySelector('.feed-shared-inline-show-more-text');
 
-        log('Text container found:', !!textContainer);
-        
         if (textContainer) {
             text = textContainer.textContent.trim();
-            log('Text content length:', text.length);
         }
 
         // If no text found, try other selectors
         if (!text) {
-            log('No text found in primary container, trying alternates...');
             const alternateTextContainer = postContainer.querySelector('.feed-shared-update-v2__description-wrapper') ||
                                         postContainer.querySelector('.feed-shared-update__description-wrapper');
             if (alternateTextContainer) {
                 text = alternateTextContainer.textContent.trim();
-                log('Alternate text content length:', text.length);
             }
         }
 
         // If still no text, use a default message
         if (!text) {
-            log('No text found in any container');
             text = 'No post text found. Please generate a general comment.';
         }
 
-        return { 
-            text, 
-            postId: fullUrn, 
-            linkedinUrn 
-        };
+        return { text, postId };
     } catch (error) {
-        log('Error getting post info:', error);
+        console.error('Error getting post info:', error);
         return {
             text: 'No post text found. Please generate a general comment.',
-            postId: `post_${Date.now()}`,
-            linkedinUrn: ''
+            postId: `post_${Date.now()}`
         };
     }
 }
@@ -268,14 +218,10 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         log('Getting post info...');
         const { text: postText, postId, linkedinUrn } = await getPostInfo(button);
         log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn });
-        
-        if (!window.API_CONFIG) {
-            throw new Error('API configuration not found');
-        }
 
-        // Generate comments
+        // Generate comments using CommentAPI
         log('Generating comments...');
-        const comments = await window.CommentAPI.generateComments(
+        const result = await window.CommentAPI.generateComments(
             postText, 
             'linkedin', 
             linkedinUrn
@@ -286,8 +232,8 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         commentsList.style.display = 'block';
 
         // Display comments
-        log('Comments generated:', comments);
-        displayCommentOptions(comments, modal, button, postId, isRegeneration);
+        log('Comments generated:', result.comments);
+        displayCommentOptions(result.comments, modal, button, postId, isRegeneration);
 
     } catch (error) {
         log('Comment generation error:', error);
@@ -356,18 +302,25 @@ function displayCommentOptions(comments, modal, button, postId, isRegeneration =
         // Handle comment selection
         const useButton = commentOption.querySelector('.use-comment-btn');
         useButton.addEventListener('click', async () => {
-            try {
-                const commentField = findCommentField(button);
-                if (commentField) {
-                    insertComment(commentField, comment.text);
-                    modal.classList.add('hidden');
-                    showNotification('Comment added successfully!', 'success');
-                } else {
-                    showNotification('Could not find comment field. Please try again.', 'error');
+            const commentField = findCommentField(button);
+            if (commentField) {
+                insertComment(commentField, comment.text);
+                modal.classList.add('hidden');
+
+                // Track comment selection
+                if (window.analyticsObserver) {
+                    window.analyticsObserver.trackCommentSelection('linkedin', {
+                        text: comment.text,
+                        index,
+                        tone: comment.type,
+                        isRegenerated: isRegeneration,
+                        regenerationId: sessionStorage.getItem('regenerationId')
+                    }, postId);
                 }
-            } catch (error) {
-                console.error('Error using comment:', error);
-                showNotification('Failed to use comment. Please try again.', 'error');
+
+                showNotification('Comment added successfully!', 'success');
+            } else {
+                showNotification('Could not find comment field. Please try again.', 'error');
             }
         });
 
@@ -497,22 +450,14 @@ function injectButtonForCommentField(commentField) {
     
     // Create and inject button
     const button = createCommentButton();
-    button.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        log('Generate comment button clicked');
-        
-        try {
-            // First create and show the modal
-            const modal = showModal(button);
-            // Ensure modal is visible
-            modal.style.display = 'flex';
-            // Then start comment generation
-            await handleCommentGeneration(button);
-        } catch (error) {
-            log('Error in button click handler:', error);
-            showNotification('Failed to generate comments. Please try again.', 'error');
+    button.addEventListener('click', async () => {
+        // Create modal if it doesn't exist
+        let modal = document.querySelector('.comment-modal.linkedin');
+        if (!modal) {
+            modal = createCommentModal(button);
+            document.body.appendChild(modal);
         }
+        handleCommentGeneration(button);
     });
     toolbar.insertBefore(button, toolbar.firstChild);
     log('Button injected successfully');
@@ -522,42 +467,55 @@ function injectButtonForCommentField(commentField) {
 function createCommentButton() {
     const button = document.createElement('button');
     button.className = 'ai-comment-generator-btn';
-    button.innerHTML = `
-        <span class="btn-icon">✨</span>
-        <span>Generate Comment</span>
-    `;
-    
+    button.innerHTML = 'Generate Comment';
+    button.style.marginRight = '8px';
     return button;
 }
 
-// Initialize button injection using MutationObserver
+// Initialize button injection
 function initializeButtonInjection() {
-    const config = { childList: true, subtree: true };
+    const commentSelectors = [
+        '.ql-editor',  // Quill editor
+        '[contenteditable="true"][role="textbox"]',
+        'div[data-placeholder="Add a comment…"]',
+        '.comments-comment-box__input',
+        '.comments-comment-texteditor__input'
+    ];
     
+    const selectorString = commentSelectors.join(', ');
+    
+    // Initial scan
+    document.querySelectorAll(selectorString).forEach(injectButtonForCommentField);
+    
+    // Watch for new editors using MutationObserver
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
+        for (const mutation of mutations) {
+            // Handle added nodes
             mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === Node.ELEMENT_NODE) {
-                    const commentFields = node.querySelectorAll('[contenteditable="true"][role="textbox"]');
-                    commentFields.forEach((field) => {
-                        if (shouldInjectButton(field)) {
-                            injectButtonForCommentField(field);
-                        }
-                    });
+                    // Check if the added node is an editor
+                    if (node.matches?.(selectorString)) {
+                        injectButtonForCommentField(node);
+                    }
+                    // Check child nodes
+                    node.querySelectorAll?.(selectorString)?.forEach(injectButtonForCommentField);
                 }
             });
-        });
-    });
-
-    // Start observing
-    observer.observe(document.body, config);
-
-    // Initial scan for existing comment fields
-    const commentFields = document.querySelectorAll('[contenteditable="true"][role="textbox"]');
-    commentFields.forEach((field) => {
-        if (shouldInjectButton(field)) {
-            injectButtonForCommentField(field);
+            
+            // Handle attribute changes that might reveal editors
+            if (mutation.type === 'attributes' && 
+                mutation.target.nodeType === Node.ELEMENT_NODE &&
+                mutation.target.matches?.(selectorString)) {
+                injectButtonForCommentField(mutation.target);
+            }
         }
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['contenteditable', 'data-placeholder', 'class']
     });
 }
 
