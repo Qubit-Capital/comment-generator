@@ -97,11 +97,11 @@ class CommentAPI {
             this.log('Clean Answer:', cleanAnswer);
             const parsedData = JSON.parse(cleanAnswer);
 
-            if (!parsedData || !Array.isArray(parsedData.comments)) {
+            if (!parsedData?.Final_output?.comments || !Array.isArray(parsedData.Final_output.comments)) {
                 throw new Error('Invalid comments data format');
             }
 
-            return parsedData.comments;
+            return parsedData.Final_output.comments;
 
         } catch (error) {
             this.log('Error generating comments:', error);
