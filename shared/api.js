@@ -29,6 +29,29 @@ class CommentAPI {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    extractComments(parsedData) {
+        // Case 1: Final_output is directly an array of comments
+        if (Array.isArray(parsedData.Final_output)) {
+            this.log('Found comments in Final_output array');
+            return parsedData.Final_output;
+        }
+        
+        // Case 2: Final_output contains comments array
+        if (parsedData.Final_output?.comments && Array.isArray(parsedData.Final_output.comments)) {
+            this.log('Found comments in Final_output.comments');
+            return parsedData.Final_output.comments;
+        }
+        
+        // Case 3: Root level comments array (v2 format)
+        if (Array.isArray(parsedData.comments)) {
+            this.log('Found comments at root level');
+            return parsedData.comments;
+        }
+        
+        this.log('No valid comments found in response:', parsedData);
+        throw new Error('No valid comments found in response');
+    }
+
     validateComments(comments) {
         if (!Array.isArray(comments)) {
             throw new Error('Comments must be an array');
@@ -66,7 +89,6 @@ class CommentAPI {
         this.isGenerating = true;
         this.log('Generating comments for platform:', platform);
         const cleanText = text ? this.preprocessText(text) : '';
-        let lastError = null;
 
         try {
             const apiUrl = `${window.API_CONFIG.baseUrl}/${window.API_CONFIG.studioId}/trigger_limited`;
@@ -116,17 +138,8 @@ class CommentAPI {
             this.log('Clean Answer:', cleanAnswer);
             const parsedData = JSON.parse(cleanAnswer);
 
-            // Extract comments from Final_output structure
-            let comments;
-            if (parsedData.Final_output && Array.isArray(parsedData.Final_output.comments)) {
-                comments = parsedData.Final_output.comments;
-            } else if (Array.isArray(parsedData.comments)) {
-                comments = parsedData.comments;
-            } else {
-                throw new Error('Invalid comments data format');
-            }
-
-            // Validate and normalize comments
+            // Extract and validate comments
+            const comments = this.extractComments(parsedData);
             return this.validateComments(comments);
 
         } catch (error) {
