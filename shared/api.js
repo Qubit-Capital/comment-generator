@@ -29,6 +29,25 @@ class CommentAPI {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    validateComments(comments) {
+        if (!Array.isArray(comments)) {
+            throw new Error('Comments must be an array');
+        }
+
+        return comments.map(comment => {
+            if (!comment.text || typeof comment.text !== 'string') {
+                throw new Error('Invalid comment text format');
+            }
+
+            // Normalize comment type
+            const type = comment.type || 'Professional';
+            return {
+                text: comment.text,
+                type: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+            };
+        });
+    }
+
     async generateComments(text, platform, linkedinUrn = '') {
         // Prevent multiple simultaneous calls
         if (this.isGenerating) {
@@ -97,11 +116,18 @@ class CommentAPI {
             this.log('Clean Answer:', cleanAnswer);
             const parsedData = JSON.parse(cleanAnswer);
 
-            if (!parsedData?.Final_output?.comments || !Array.isArray(parsedData.Final_output.comments)) {
+            // Extract comments from Final_output structure
+            let comments;
+            if (parsedData.Final_output && Array.isArray(parsedData.Final_output.comments)) {
+                comments = parsedData.Final_output.comments;
+            } else if (Array.isArray(parsedData.comments)) {
+                comments = parsedData.comments;
+            } else {
                 throw new Error('Invalid comments data format');
             }
 
-            return parsedData.Final_output.comments;
+            // Validate and normalize comments
+            return this.validateComments(comments);
 
         } catch (error) {
             this.log('Error generating comments:', error);
