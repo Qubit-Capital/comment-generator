@@ -238,6 +238,37 @@ function getPreviousComments(modal) {
         }));
 }
 
+// Function to insert comment into the comment field
+function insertComment(commentField, text) {
+    if (!commentField || !text) return;
+
+    // Set the text content
+    commentField.textContent = text;
+    
+    // Dispatch necessary events to trigger LinkedIn's internal handlers
+    commentField.dispatchEvent(new Event('input', { bubbles: true }));
+    commentField.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Focus the field to make it ready for posting
+    commentField.focus();
+}
+
+// Function to find comment field
+function findCommentField(button) {
+    // First try to find the comment field within the post container
+    const postContainer = button.closest('.feed-shared-update-v2') || 
+                         button.closest('.feed-shared-post') ||
+                         button.closest('.feed-shared-update');
+    
+    if (!postContainer) return null;
+
+    // Try to find the comment field
+    const commentField = postContainer.querySelector('[contenteditable="true"][role="textbox"]') ||
+                        postContainer.querySelector('[contenteditable="true"].comments-comment-box__text-editor');
+    
+    return commentField;
+}
+
 // Function to handle comment generation
 async function handleCommentGeneration(button, isRegeneration = false) {
     let modal = document.querySelector('.comment-modal.linkedin');
@@ -281,8 +312,8 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             linkedinUrn
         );
 
-        if (!result || !result.success || !Array.isArray(result.comments)) {
-            throw new Error(result?.error || 'Failed to generate comments');
+        if (!result.success || !Array.isArray(result.comments)) {
+            throw new Error(result.error || 'Failed to generate comments');
         }
 
         // Hide loading state
@@ -409,49 +440,6 @@ function displayCommentOptions(comments, modal, button, postId, isRegeneration =
         });
         headerActions.appendChild(closeBtn);
     }
-}
-
-// Function to insert comment into the comment field
-function insertComment(commentField, text) {
-    if (!commentField || !text) return;
-
-    // Set the text content
-    commentField.textContent = text;
-    
-    // Dispatch necessary events to trigger LinkedIn's internal handlers
-    commentField.dispatchEvent(new Event('input', { bubbles: true }));
-    commentField.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Focus the field to make it ready for posting
-    commentField.focus();
-}
-
-// Function to find comment field
-function findCommentField(button) {
-    // First try to find the comment field within the post container
-    const postContainer = button.closest('.feed-shared-update-v2') || 
-                         button.closest('.feed-shared-post') ||
-                         button.closest('.feed-shared-update');
-                         
-    if (!postContainer) return null;
-
-    // Try different selectors for the comment field
-    const commentFieldSelectors = [
-        'div[contenteditable="true"]',
-        'div[role="textbox"]',
-        '.comments-comment-box__form-container div[contenteditable="true"]',
-        '.comments-comment-texteditor__content',
-        '.comments-comment-box-comment__text-editor',
-        'div[data-placeholder="Add a comment…"]',
-        '.ql-editor'
-    ];
-
-    for (const selector of commentFieldSelectors) {
-        const field = postContainer.querySelector(selector);
-        if (field) return field;
-    }
-
-    return null;
 }
 
 // Function to show notification

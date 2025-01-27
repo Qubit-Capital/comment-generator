@@ -41,10 +41,14 @@ class CommentAPI {
             'Personal Experience': 'Friendly',
             'Constructive Criticism': 'Serious',
             'Agreement with Expansion': 'Supportive',
-            'Humorous': 'Humorous'
+            'Helpful': 'Professional',
+            'Neutral': 'Neutral',
+            'Friendly': 'Friendly',
+            'Humorous': 'Humorous',
+            'Curious': 'Professional'
         };
 
-        return typeMap[baseType] || baseType;
+        return typeMap[baseType] || 'Professional';
     }
 
     validateComments(comments) {
@@ -167,7 +171,10 @@ class CommentAPI {
 
         } catch (error) {
             this.log('Error generating comments:', error);
-            throw error;
+            return {
+                success: false,
+                error: error.message || 'Failed to generate comments'
+            };
         } finally {
             // Always reset the generating flag
             this.isGenerating = false;
