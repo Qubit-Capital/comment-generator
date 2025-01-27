@@ -62,9 +62,14 @@ body {
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.comment-modal.loading {
+.comment-modal.active {
     opacity: 1;
     visibility: visible;
+}
+
+.comment-modal.hidden {
+    opacity: 0;
+    visibility: hidden;
 }
 
 .modal-content {
@@ -80,7 +85,7 @@ body {
     transition: transform 0.3s ease;
 }
 
-.comment-modal.loading .modal-content {
+.comment-modal.active .modal-content {
     transform: translateY(0);
 }
 
@@ -134,16 +139,15 @@ body {
 
 /* Loading Spinner */
 .loading-container {
-    padding: 40px;
-    text-align: center;
     display: none;
-}
-
-.comment-modal.loading .loading-container {
-    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 40px 20px;
+}
+
+.comment-modal.active .loading-container {
+    display: flex;
 }
 
 .loading-spinner {
@@ -173,8 +177,12 @@ body {
 
 /* Comments List */
 .comments-list {
-    padding: 20px;
     display: none;
+    padding: 20px;
+}
+
+.comments-list.visible {
+    display: block;
 }
 
 .comment-option {
@@ -188,7 +196,7 @@ body {
 
 .comment-option:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .comment-header {

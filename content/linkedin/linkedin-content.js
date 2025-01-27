@@ -280,8 +280,11 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             document.body.appendChild(modal);
         }
 
-        // Show modal and loading state
+        // Show modal and set initial state
+        modal.classList.remove('hidden');
+        modal.classList.add('active');
         modal.classList.add('loading');
+
         const loadingContainer = modal.querySelector('.loading-container');
         const errorMessage = modal.querySelector('.error-message');
         const commentsList = modal.querySelector('.comments-list');
@@ -293,6 +296,7 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         // Reset modal state
         loadingContainer.style.display = 'flex';
         commentsList.style.display = 'none';
+        commentsList.classList.remove('visible');
         errorMessage.classList.remove('visible');
 
         // Get post info
@@ -300,8 +304,8 @@ async function handleCommentGeneration(button, isRegeneration = false) {
         const { text: postText, postId, linkedinUrn } = await getPostInfo(button);
         log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn });
         
-        if (!window.API_CONFIG) {
-            throw new Error('API configuration not found');
+        if (!window.CommentAPI) {
+            throw new Error('Comment API not initialized');
         }
 
         // Generate comments
@@ -316,9 +320,10 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             throw new Error(result.error || 'Failed to generate comments');
         }
 
-        // Hide loading state
+        // Hide loading state and show comments
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
+        commentsList.classList.add('visible');
 
         // Display comments
         log('Comments generated:', result.comments);
@@ -359,7 +364,7 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             'error'
         );
     } finally {
-        // Remove loading state from modal
+        // Remove loading state but keep modal visible
         if (modal) {
             modal.classList.remove('loading');
         }
@@ -395,6 +400,7 @@ function displayCommentOptions(comments, modal, button, postId, isRegeneration =
             if (commentField) {
                 insertComment(commentField, comment.text);
                 modal.classList.add('hidden');
+                modal.classList.remove('active');
 
                 // Show success notification
                 showNotification('Comment added successfully!', 'success');
@@ -437,6 +443,7 @@ function displayCommentOptions(comments, modal, button, postId, isRegeneration =
         closeBtn.textContent = '×';
         closeBtn.addEventListener('click', () => {
             modal.classList.add('hidden');
+            modal.classList.remove('active');
         });
         headerActions.appendChild(closeBtn);
     }
