@@ -9,6 +9,7 @@ A browser extension that generates contextual comments for LinkedIn and BreakCol
 - Analytics tracking for comment generation and usage
 - Comment regeneration with history tracking
 - Clean and intuitive user interface
+- Robust API handling with retries and timeouts
 
 ## Technical Architecture
 
@@ -22,6 +23,7 @@ A browser extension that generates contextual comments for LinkedIn and BreakCol
 - Platform-specific analytics models
 - Event-based architecture for tracking
 - WebSocket support for real-time updates
+- Relevance API integration with retry mechanism
 
 ## Installation
 
@@ -31,11 +33,20 @@ A browser extension that generates contextual comments for LinkedIn and BreakCol
 npm install
 ```
 3. Set up MongoDB and configure connection string in `.env`
-4. Start the analytics server:
+4. Configure API settings in `shared/config.js`:
+```javascript
+const API_CONFIG = {
+    studioId: 'your-studio-id',
+    projectId: 'your-project-id',
+    baseUrl: 'https://api-bcbe5a.stack.tryrelevance.com/latest/studios',
+    apiKey: 'your-api-key'
+};
+```
+5. Start the analytics server:
 ```bash
 npm run start-analytics
 ```
-5. Load the extension in Chrome:
+6. Load the extension in Chrome:
    - Open `chrome://extensions/`
    - Enable Developer mode
    - Click "Load unpacked"
@@ -54,11 +65,6 @@ npm run start-analytics
 ├── models/              # Data models
 ├── shared/             # Shared utilities
 └── analytics/          # Analytics tracking
-```
-
-### Testing
-```bash
-npm test
 ```
 
 ### Building

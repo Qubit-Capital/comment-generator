@@ -11,6 +11,9 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
 - Platform: Chrome Extension
 - Main Integration: LinkedIn, Breakcold
 - API: Relevance API (https://api-bcbe5a.stack.tryrelevance.com/latest/studios)
+  - Timeout: 150 seconds
+  - Retry Attempts: 3
+  - Response Format: Preserves original comment types
 - Analytics: MongoDB-based event tracking and visualization
 
 ## Key Components
@@ -23,6 +26,37 @@ LinkedIn Comment Generator Chrome Extension that helps users generate contextual
   - Smooth transitions and error handling
   - Event dispatching for analytics tracking
   - Custom event handling for modal actions
+
+### 2. API Integration
+- **api.js**: Core API integration
+  - Enhanced error handling with retries
+  - Extended timeout for reliable responses
+  - Preserves original comment types
+  - Response Format:
+    ```javascript
+    {
+        "status": "complete",
+        "errors": [],
+        "output": {
+            "Author_url": string,
+            "Generated Comments": "```json\n{\n  \"Final_output\": [...]\n}\n```"
+        },
+        "credits_used": Array,
+        "executionTime": number
+    }
+    ```
+  - Comment Format:
+    ```javascript
+    {
+        "type": string,  // Original type preserved (e.g., "Positive", "Friendly", "Relatable")
+        "text": string   // The generated comment text
+    }
+    ```
+  - Error Handling:
+    - Timeout after 150 seconds
+    - Up to 3 retry attempts
+    - 2-second delay between retries
+    - Detailed error logging
 
 ### 2. Analytics System
 - **analytics-observer.js**: Core analytics tracking
