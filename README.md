@@ -67,6 +67,11 @@ npm run start-analytics
 └── analytics/          # Analytics tracking
 ```
 
+### Testing
+```bash
+npm test
+```
+
 ### Building
 ```bash
 npm run build
