@@ -2,7 +2,8 @@
 class CommentAPI {
     constructor() {
         this.maxRetries = 3;
-        this.retryDelay = 1000; // 1 second delay between retries
+        this.retryDelay = 2000; // 2 seconds delay between retries
+        this.apiTimeout = 150000; // 150 seconds timeout
         this.DEBUG = true;
         this.isGenerating = false;
     }
@@ -29,26 +30,10 @@ class CommentAPI {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    normalizeCommentType(type) {
-        if (!type) return 'Professional';
-
-        // Remove parentheses and content within them
-        const baseType = type.split('(')[0].trim();
-
-        // Map of complex types to simple ones
-        const typeMap = {
-            'Informational': 'Neutral',
-            'Personal Experience': 'Friendly',
-            'Constructive Criticism': 'Serious',
-            'Agreement with Expansion': 'Supportive',
-            'Helpful': 'Professional',
-            'Neutral': 'Neutral',
-            'Friendly': 'Friendly',
-            'Humorous': 'Humorous',
-            'Curious': 'Professional'
-        };
-
-        return typeMap[baseType] || 'Professional';
+    createTimeout(ms) {
+        return new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('API request timed out')), ms);
+        });
     }
 
     validateComments(comments) {
@@ -57,15 +42,20 @@ class CommentAPI {
         }
 
         return comments.map(comment => {
+            // Validate required text field
             if (!comment.text || typeof comment.text !== 'string') {
                 throw new Error('Invalid comment text format');
             }
 
-            // Normalize comment type
-            const normalizedType = this.normalizeCommentType(comment.type);
+            // Validate and preserve original type, use 'General' only if missing
+            if (comment.type && typeof comment.type !== 'string') {
+                this.log('Warning: Comment type is not a string:', comment.type);
+                comment.type = 'General';
+            }
+
             return {
                 text: comment.text,
-                type: normalizedType
+                type: comment.type || 'General'
             };
         });
     }
@@ -91,6 +81,76 @@ class CommentAPI {
         
         this.log('No valid comments found in response:', parsedData);
         throw new Error('No valid comments found in response');
+    }
+
+    async makeApiCall(apiUrl, requestBody) {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': window.API_CONFIG.apiKey
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            this.log('API Error:', errorData);
+            throw new Error(
+                errorData.error?.message || 
+                errorData.message || 
+                `API request failed with status ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+        this.log('API Response:', data);
+
+        // Check response status
+        if (data.status !== 'complete') {
+            throw new Error('API response status is not complete');
+        }
+
+        // Check for API-level errors
+        if (data.errors && data.errors.length > 0) {
+            throw new Error(`API errors: ${data.errors.join(', ')}`);
+        }
+
+        return data;
+    }
+
+    async makeApiCallWithTimeout(apiUrl, requestBody) {
+        return Promise.race([
+            this.makeApiCall(apiUrl, requestBody),
+            this.createTimeout(this.apiTimeout)
+        ]);
+    }
+
+    async retryApiCall(apiUrl, requestBody) {
+        let lastError;
+        const startTime = Date.now();
+
+        for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+            try {
+                this.log(`API call attempt ${attempt}/${this.maxRetries}`);
+                const result = await this.makeApiCallWithTimeout(apiUrl, requestBody);
+                const totalTime = Date.now() - startTime;
+                this.log(`Successful after ${attempt} attempt(s). Total time: ${totalTime}ms`);
+                return result;
+            } catch (error) {
+                lastError = error;
+                this.log(`Attempt ${attempt} failed:`, error.message);
+                
+                if (attempt === this.maxRetries) {
+                    const totalTime = Date.now() - startTime;
+                    this.log(`All ${this.maxRetries} attempts failed. Total time: ${totalTime}ms`);
+                    throw new Error(`Failed after ${this.maxRetries} attempts. Last error: ${error.message}`);
+                }
+
+                this.log(`Waiting ${this.retryDelay}ms before retry...`);
+                await this.delay(this.retryDelay);
+            }
+        }
     }
 
     async generateComments(text, platform, linkedinUrn = '') {
@@ -129,44 +189,33 @@ class CommentAPI {
 
             this.log('Making API request with body:', requestBody);
             
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': window.API_CONFIG.apiKey
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                this.log('API Error:', errorData);
-                throw new Error(
-                    errorData.error?.message || 
-                    errorData.message || 
-                    `API request failed with status ${response.status}`
-                );
-            }
-
-            const data = await response.json();
-            this.log('API Response:', data);
+            const data = await this.retryApiCall(apiUrl, requestBody);
             
-            if (!data.output || !data.output.answer) {
+            // Log execution metrics
+            this.log('Execution Time:', data.executionTime, 'ms');
+            this.log('Credits Used:', data.credits_used);
+            
+            if (!data.output || !data.output['Generated Comments']) {
                 throw new Error('Invalid response format from API');
             }
 
             // Parse the answer which is a JSON string wrapped in markdown code block
-            const cleanAnswer = data.output.answer.replace(/```json\n?|\n?```/g, '').trim();
+            const cleanAnswer = data.output['Generated Comments'].replace(/```json\n?|\n?```/g, '').trim();
             this.log('Clean Answer:', cleanAnswer);
             const parsedData = JSON.parse(cleanAnswer);
 
             // Extract and validate comments
             const comments = this.extractComments(parsedData);
-            const normalizedComments = this.validateComments(comments);
+            const validatedComments = this.validateComments(comments);
 
             return {
                 success: true,
-                comments: normalizedComments
+                comments: validatedComments,
+                metadata: {
+                    authorUrl: data.output.Author_url,
+                    executionTime: data.executionTime,
+                    creditsUsed: data.credits_used
+                }
             };
 
         } catch (error) {

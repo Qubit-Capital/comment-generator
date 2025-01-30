@@ -4,6 +4,12 @@ All notable changes to the Comment Generator Extension will be documented in thi
 
 ## [Unreleased]
 
+### Changed
+- Enhanced API response handling with 150-second timeout and 3 retry attempts
+- Removed comment type normalization to preserve original API response types
+- Improved error handling and logging for API calls
+- Added detailed execution metrics in API response
+
 ## [2.0.0] - 2025-01-03
 
 ### Added
