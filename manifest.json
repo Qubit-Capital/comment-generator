@@ -12,7 +12,8 @@
     "https://*.linkedin.com/*",
     "https://*.breakcold.com/*",
     "https://*.app.breakcold.com/*",
-    "https://api-bcbe5a.stack.tryrelevance.com/*"
+    "https://api-bcbe5a.stack.tryrelevance.com/*",
+    "https://agdcoeowduqueddyfqop.supabase.co/*"
   ],
   "content_scripts": [
     {
@@ -21,10 +22,12 @@
         "shared/config.js",
         "shared/api.js",
         "shared/utils.js",
+        "serverInteractions.js",
         "content/linkedin/linkedin-content.js"
       ],
       "css": ["styles/styles.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "type": "module"
     },
     {
       "matches": [
@@ -35,10 +38,12 @@
         "shared/config.js",
         "shared/api.js",
         "shared/utils.js",
+        "serverInteractions.js",
         "content/breakcold/breakcold-content.js"
       ],
       "css": ["styles/styles.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
   "web_accessible_resources": [
@@ -47,12 +52,14 @@
         "shared/*",
         "content/*",
         "styles/*",
-        "popup/*"
+        "popup/*",
+        "serverInteractions.js"
       ],
       "matches": [
         "https://*.linkedin.com/*",
         "https://*.breakcold.com/*",
-        "https://*.app.breakcold.com/*"
+        "https://*.app.breakcold.com/*",
+        "https://agdcoeowduqueddyfqop.supabase.co/*"
       ]
     }
   ],

@@ -62,6 +62,17 @@
         <div class="platform-name">Breakcold</div>
         <div id="breakcoldStatus" class="status-badge">Checking...</div>
     </div>
+    <button id="toggleSettings" style="float:right; margin: 10px;">Settings</button>
+
+    <!-- Hidden settings panel -->
+    <div id="settingsPanel" style="display: none; padding: 10px; border: 1px solid #ccc; margin-top: 10px;">
+        <label for="access-token">Access Token:</label>
+        <input type="text" id="access-token" placeholder="Enter your access token" style="width: 100%; padding: 8px; margin-bottom: 8px;" />
+        <button id="save-token">Save</button>
+        <div id="settings-message" style="margin-top: 8px; color: green;"></div>
+    </div>
+
     <script src="popup.js"></script>
+    <script src="popup_settings.js"></script>
 </body>
 </html>

@@ -93,6 +93,28 @@ class CommentAPI {
             body: JSON.stringify(requestBody)
         });
 
+        // Clone response for logging (since response.json() can only be called once)
+        const responseClone = response.clone();
+        
+        try {
+            // Log the raw response
+            const rawResponse = await responseClone.text();
+            this.log('=== Raw API Response ===');
+            this.log('Status:', response.status);
+            this.log('Headers:', Object.fromEntries(response.headers));
+            this.log('Body:', rawResponse);
+            
+            // Try to parse as JSON for prettier logging
+            try {
+                const jsonResponse = JSON.parse(rawResponse);
+                this.log('Parsed JSON Response:', JSON.stringify(jsonResponse, null, 2));
+            } catch (e) {
+                this.log('Response is not JSON format');
+            }
+        } catch (e) {
+            this.log('Failed to log raw response:', e);
+        }
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             this.log('API Error:', errorData);
@@ -103,20 +125,7 @@ class CommentAPI {
             );
         }
 
-        const data = await response.json();
-        this.log('API Response:', data);
-
-        // Check response status
-        if (data.status !== 'complete') {
-            throw new Error('API response status is not complete');
-        }
-
-        // Check for API-level errors
-        if (data.errors && data.errors.length > 0) {
-            throw new Error(`API errors: ${data.errors.join(', ')}`);
-        }
-
-        return data;
+        return response.json();
     }
 
     async makeApiCallWithTimeout(apiUrl, requestBody) {

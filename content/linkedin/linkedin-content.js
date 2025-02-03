@@ -317,10 +317,19 @@ async function handleCommentGeneration(button, isRegeneration = false) {
 
         // Gather interaction data and send to background
         const interactionData = {
-            postMeta: { postText, postId, linkedinUrn, targetProfileUrl },
+            postMeta: { 
+                postText, 
+                postId, 
+                linkedinUrn,
+                targetProfileUrl 
+            },
             platform: 'linkedin',
             timestamp: Date.now()
         };
+        
+        // Call the server interaction function
+        sendLinkedinInteraction(interactionData);
+        
         log('server testing:', interactionData);
         chrome.runtime.sendMessage({ type: 'GENERATE_COMMENTS', data: interactionData }, (response) => {
             console.log('Interaction data sent', response);
