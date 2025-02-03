@@ -158,6 +158,7 @@ async function getPostInfo(button) {
         let text = '';
         let postId = '';
         let linkedinUrn = '';
+        let targetProfileUrl = '';
 
         // Find the post container
         const postContainer = button.closest('.feed-shared-update-v2') || 
@@ -211,17 +212,23 @@ async function getPostInfo(button) {
             text = 'No post text found. Please generate a general comment.';
         }
 
+        // Extract the target profile URL
+        const targetProfileElement = postContainer.querySelector('a.update-components-actor__meta-link');
+        targetProfileUrl = targetProfileElement ? targetProfileElement.href : null;
+
         return { 
             text, 
             postId: fullUrn, 
-            linkedinUrn 
+            linkedinUrn, 
+            targetProfileUrl 
         };
     } catch (error) {
         log('Error getting post info:', error);
         return {
             text: 'No post text found. Please generate a general comment.',
             postId: `post_${Date.now()}`,
-            linkedinUrn: ''
+            linkedinUrn: '',
+            targetProfileUrl: null
         };
     }
 }
@@ -301,12 +308,23 @@ async function handleCommentGeneration(button, isRegeneration = false) {
 
         // Get post info
         log('Getting post info...');
-        const { text: postText, postId, linkedinUrn } = await getPostInfo(button);
-        log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn });
+        const { text: postText, postId, linkedinUrn, targetProfileUrl } = await getPostInfo(button);
+        log('Post info:', { postText: postText.substring(0, 100) + '...', postId, linkedinUrn, targetProfileUrl });
         
         if (!window.CommentAPI) {
             throw new Error('Comment API not initialized');
         }
+
+        // Gather interaction data and send to background
+        const interactionData = {
+            postMeta: { postText, postId, linkedinUrn, targetProfileUrl },
+            platform: 'linkedin',
+            timestamp: Date.now()
+        };
+        log('server testing:', interactionData);
+        chrome.runtime.sendMessage({ type: 'GENERATE_COMMENTS', data: interactionData }, (response) => {
+            console.log('Interaction data sent', response);
+        });
 
         // Generate comments
         log('Generating comments...');
@@ -559,6 +577,12 @@ function createCommentButton() {
     `;
     
     return button;
+}
+
+// Function to get user profile URL
+function getTargetProfileUrl() {
+    const profileLink = document.querySelector('a[data-control-name="nav_profile"]');
+    return profileLink ? profileLink.href : null;
 }
 
 // Initialize button injection using MutationObserver
