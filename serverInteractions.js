@@ -84,3 +84,88 @@ function sendLinkedinInteraction(interactionData) {
     });
   });
 }
+
+// Function to send generated comments to the server
+function sendLinkedinComments(postId, comments) {
+    return new Promise((resolve, reject) => {
+        chrome.storage.sync.get('accessToken', (result) => {
+            const accessToken = result.accessToken;
+            if (!accessToken) {
+                console.error('No access token found. Please set it in the extension settings.');
+                reject(new Error('No access token found'));
+                return;
+            }
+
+            // Log masked token for debugging (only show last 4 chars)
+            const maskedToken = '*'.repeat(accessToken.length - 4) + accessToken.slice(-4);
+            console.log('Using access token:', maskedToken);
+
+            // Construct payload
+            const payload = {
+                post_id: postId,
+                comments: comments
+            };
+
+            // Log the complete request details
+            console.log('=== Comments API Request Details ===');
+            console.log('Endpoint:', 'https://agdcoeowduqueddyfqop.supabase.co/functions/v1/update-linkedin-comments');
+            console.log('Headers:', {
+                'Authorization': `Bearer ${maskedToken}`,
+                'Content-Type': 'application/json'
+            });
+            console.log('Payload:', JSON.stringify(payload, null, 2));
+
+            // Make the POST request to the server endpoint
+            fetch('https://agdcoeowduqueddyfqop.supabase.co/functions/v1/update-linkedin-comments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async response => {
+                // Log the complete response
+                console.log('=== Comments API Response ===');
+                console.log('Status:', response.status);
+                console.log('Status Text:', response.statusText);
+                
+                // Try to get response body
+                let responseBody;
+                try {
+                    responseBody = await response.text();
+                    console.log('Response Body:', responseBody);
+                    
+                    // Try to parse as JSON if possible
+                    try {
+                        responseBody = JSON.parse(responseBody);
+                    } catch (e) {
+                        // Response wasn't JSON, keep as text
+                    }
+                } catch (e) {
+                    console.log('Could not read response body');
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${JSON.stringify(responseBody)}`);
+                }
+                
+                return responseBody;
+            })
+            .then(data => {
+                console.log('=== Success ===');
+                console.log('Comments saved successfully:', data);
+                resolve(data);
+            })
+            .catch(error => {
+                console.error('=== Error ===');
+                console.error('Error saving comments:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                reject(error);
+            });
+        });
+    });
+}

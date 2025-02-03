@@ -347,6 +347,15 @@ async function handleCommentGeneration(button, isRegeneration = false) {
             throw new Error(result.error || 'Failed to generate comments');
         }
 
+        // Send the cleaned comments to Supabase
+        try {
+            await sendLinkedinComments(postId, result.comments);
+            log('Comments saved to Supabase successfully');
+        } catch (error) {
+            console.error('Failed to save comments to Supabase:', error);
+            // Continue execution even if Supabase save fails
+        }
+
         // Hide loading state and show comments
         loadingContainer.style.display = 'none';
         commentsList.style.display = 'block';
